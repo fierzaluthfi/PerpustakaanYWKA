@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>SIP YWKA - Admin</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <!-- MENGHUBUNGKAN SUPABASE -->
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        .bg-ywka-blue { background-color: #071a9e; }
+        .bg-ywka-green { background-color: #1b8827; }
+        .bg-ywka-orange { background-color: #fd5203; }
+        .text-ywka-orange { color: #fd5203; }
+        html, body, #app { height: 100%; width: 100%; margin: 0; overflow: hidden; }
+        [v-cloak] { display: none; }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+    </style>
+</head>
+<body class="bg-gray-100 font-sans text-gray-800">
+    <div id="app" v-cloak class="h-full flex flex-col relative overflow-hidden">
+        
+        <!-- HALAMAN LOGIN -->
+        <div v-if="!isLoggedIn" class="min-h-full bg-ywka-blue flex flex-col justify-center items-center relative overflow-hidden p-4">
+            <div class="absolute top-0 left-0 w-full h-full opacity-10 pointer-events-none" style="background-image: radial-gradient(circle, #ffffff 2px, transparent 2px); background-size: 30px 30px;"></div>
+            <div class="bg-white p-8 md:p-10 rounded-2xl shadow-2xl w-full max-w-sm text-center z-10 border-t-8 border-ywka-orange">
+                <div class="h-24 md:h-28 w-24 md:w-28 mx-auto mb-4 bg-gray-100 rounded-full flex items-center justify-center border-4 border-ywka-blue"><i class="fas fa-book-reader text-4xl text-ywka-blue"></i></div>
+                <h2 class="text-xl md:text-2xl font-extrabold text-gray-800 tracking-tight">SIP YWKA</h2>
+                <p class="text-gray-500 mb-6 md:mb-8 text-sm">Sistem Perpustakaan Digital</p>
+                <form @submit.prevent="prosesLogin" class="space-y-4 text-left">
+                    <div><label class="block text-sm font-semibold text-gray-700 mb-1">Email Petugas</label><div class="relative"><i class="fas fa-envelope absolute left-3 top-3 text-gray-400"></i><input type="email" v-model="loginData.email" required placeholder="admin@ywka.com" class="w-full border-2 border-gray-200 pl-10 pr-3 py-2 rounded-lg focus:border-ywka-blue outline-none transition-colors"></div></div>
+                    <div><label class="block text-sm font-semibold text-gray-700 mb-1">Password</label><div class="relative"><i class="fas fa-lock absolute left-3 top-3 text-gray-400"></i><input type="password" v-model="loginData.password" required class="w-full border-2 border-gray-200 pl-10 pr-3 py-2 rounded-lg focus:border-ywka-blue outline-none transition-colors"></div></div>
+                    <div v-if="loadingLogin" class="text-ywka-blue text-sm font-bold text-center animate-pulse"><i class="fas fa-spinner fa-spin mr-1"></i> Memeriksa data login...</div>
+                    <div v-if="loginError" class="text-red-500 text-sm font-medium text-center bg-red-50 py-2 rounded">{{ loginError }}</div>
+                    <button type="submit" :disabled="loadingLogin" class="w-full bg-ywka-orange text-white py-3 rounded-lg font-bold hover:bg-orange-600 transition-colors shadow-lg mt-2 text-lg disabled:opacity-50">Masuk</button>
+                </form>
+            </div>
+            <p class="text-white text-xs mt-6 opacity-70">© 2026 SMA YWKA Bandung</p>
+        </div>
+
+        <!-- DASHBOARD UTAMA -->
+        <div v-else class="flex flex-col md:flex-row h-full w-full overflow-hidden relative">
+            
+            <aside class="w-full md:w-64 bg-ywka-blue text-white flex flex-col shadow-2xl z-20 flex-shrink-0" :class="{'h-auto': isMobile, 'h-full': !isMobile}">
+                <div class="p-4 md:p-6 border-b border-blue-800 flex justify-between items-center">
+                    <div class="flex items-center gap-3">
+                        <div class="bg-white p-2 rounded shadow-md flex items-center justify-center"><i class="fas fa-book-reader text-2xl text-ywka-blue"></i></div>
+                        <div><h2 class="font-bold text-base md:text-lg leading-tight">SIP YWKA</h2><p class="text-[10px] md:text-xs text-blue-200">Portal Petugas</p></div>
+                    </div>
+                    <button class="md:hidden text-white text-2xl focus:outline-none" @click="mobileMenuOpen = !mobileMenuOpen"><i class="fas" :class="mobileMenuOpen ? 'fa-times' : 'fa-bars'"></i></button>
+                </div>
+                <nav class="flex-grow p-4 space-y-2 overflow-y-auto" :class="{'hidden md:block': !mobileMenuOpen, 'block': mobileMenuOpen}">
+                    <button @click="changeMenu('dashboard')" :class="activeMenu === 'dashboard' ? 'bg-ywka-green border-l-4 border-ywka-orange' : 'hover:bg-blue-800'" class="w-full flex items-center gap-3 px-4 py-3 text-left rounded transition-colors text-sm md:text-base"><i class="fas fa-tachometer-alt w-5 text-center"></i> <span>Dashboard</span></button>
+                    <button @click="changeMenu('databuku')" :class="activeMenu === 'databuku' ? 'bg-ywka-green border-l-4 border-ywka-orange' : 'hover:bg-blue-800'" class="w-full flex items-center gap-3 px-4 py-3 text-left rounded transition-colors text-sm md:text-base"><i class="fas fa-book w-5 text-center"></i> <span>Database Buku</span></button>
+                    <button @click="changeMenu('datasiswa')" :class="activeMenu === 'datasiswa' ? 'bg-ywka-green border-l-4 border-ywka-orange' : 'hover:bg-blue-800'" class="w-full flex items-center gap-3 px-4 py-3 text-left rounded transition-colors text-sm md:text-base"><i class="fas fa-users w-5 text-center"></i> <span>Database Siswa</span></button>
+                    <button @click="changeMenu('pengaturan')" :class="activeMenu === 'pengaturan' ? 'bg-ywka-green border-l-4 border-ywka-orange' : 'hover:bg-blue-800'" class="w-full flex items-center gap-3 px-4 py-3 text-left rounded transition-colors mt-4 text-sm md:text-base"><i class="fas fa-cogs w-5 text-center"></i> <span>Pengaturan Sistem</span></button>
+                    <div class="mt-8 border-t border-blue-800 pt-4 md:hidden"><button @click="logout" class="w-full text-sm text-red-300 hover:text-white transition-colors py-2"><i class="fas fa-sign-out-alt mr-1"></i> Keluar Sistem</button></div>
+                </nav>
+                <div class="p-4 border-t border-blue-800 text-center hidden md:block"><button @click="logout" class="text-sm text-red-300 hover:text-white transition-colors"><i class="fas fa-sign-out-alt mr-1"></i> Keluar Sistem</button></div>
+            </aside>
+
+            <main class="flex-1 flex flex-col h-full overflow-hidden bg-gray-50">
+                <!-- HEADER -->
+                <header class="bg-white shadow-sm border-b px-4 md:px-8 py-3 flex flex-wrap justify-between items-center z-10 gap-2">
+                    <h1 class="text-lg md:text-2xl font-bold text-gray-700">{{ menuTitle }}</h1>
+                    <div class="flex items-center gap-2 md:gap-4 ml-auto">
+                        <div v-if="loading" class="text-ywka-orange font-bold animate-pulse text-xs"><i class="fas fa-spinner fa-spin mr-1"></i> Proses Data...</div>
+                        <div class="relative"><input type="text" v-model="searchQuery" placeholder="Cari data..." class="bg-gray-100 rounded-full py-1.5 px-3 md:px-4 pl-8 md:pl-8 text-xs md:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-32 md:w-64 border border-gray-200"><i class="fas fa-search absolute left-3 top-2.5 text-gray-400 text-xs"></i></div>
+                        <div class="hidden md:flex items-center gap-3 border-l pl-4 ml-2"><div class="text-right leading-tight"><p class="text-sm font-bold text-gray-800">{{ currentUser.nama }}</p><p class="text-[10px] text-ywka-orange font-semibold">{{ currentUser.role }}</p></div><div class="bg-ywka-blue text-white rounded-full h-8 w-8 flex items-center justify-center font-bold shadow-md">{{ currentUser.nama.charAt(0).toUpperCase() }}</div></div>
+                    </div>
+                </header>
+
+                <div class="flex-1 overflow-y-auto p-4 md:p-8">
+                    <!-- DASHBOARD -->
+                    <div v-if="activeMenu === 'dashboard'" class="space-y-4 md:space-y-6">
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 md:gap-6">
+                            <div class="bg-white p-4 md:p-6 rounded-xl shadow border-l-4 border-ywka-blue"><p class="text-xs md:text-sm text-gray-500">Total Buku</p><p class="text-xl md:text-2xl font-bold text-ywka-blue">{{ statistik.totalBuku }}</p></div>
+                            <div class="bg-white p-4 md:p-6 rounded-xl shadow border-l-4 border-ywka-green"><p class="text-xs md:text-sm text-gray-500">Total Siswa</p><p class="text-xl md:text-2xl font-bold text-ywka-green">{{ statistik.totalSiswa }}</p></div>
+                            <div class="bg-white p-4 md:p-6 rounded-xl shadow border-l-4 border-ywka-orange"><p class="text-xs md:text-sm text-gray-500">Buku Dipinjam</p><p class="text-xl md:text-2xl font-bold text-ywka-orange">{{ statistik.peminjamanAktif }}</p></div>
+                        </div>
+
+                        <div class="bg-white rounded-xl shadow overflow-hidden">
+                            <div class="px-4 md:px-6 py-4 border-b bg-gray-50 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                                <div class="flex flex-wrap items-center gap-2"><h3 class="font-bold mr-2 text-sm md:text-base">Rekapan Transaksi</h3><select v-model="filterBulan" class="border border-gray-300 rounded px-2 py-1 text-xs md:text-sm"><option value="">Semua Bulan</option><option v-for="b in daftarBulan" :key="b.value" :value="b.value">{{ b.label }}</option></select></div>
+                                <div class="flex flex-wrap items-center gap-2 w-full md:w-auto">
+                                    <button @click="bukaForm('transaksi')" class="flex-1 bg-ywka-orange text-white px-3 py-1.5 rounded shadow font-bold hover:scale-105"><i class="fas fa-plus-circle mr-1"></i> Baru</button>
+                                    <button @click="downloadLaporanTransaksi" class="flex-1 bg-ywka-green text-white px-3 py-1.5 rounded shadow font-bold"><i class="fas fa-file-pdf mr-1"></i> PDF</button>
+                                    <button @click="hapusSemuaRiwayat" class="flex-1 text-red-600 hover:bg-red-100 px-3 py-1.5 rounded border border-red-200 font-bold"><i class="fas fa-trash-alt mr-1"></i> Clear</button>
+                                </div>
+                            </div>
+                            <div class="overflow-x-auto">
+                                <table class="w-full text-left text-xs md:text-sm whitespace-nowrap"><thead class="bg-gray-100"><tr><th class="px-4 py-3">ID</th><th class="px-4 py-3">Siswa</th><th class="px-4 py-3">Buku</th><th class="px-4 py-3">Waktu</th><th class="px-4 py-3 text-center">Denda</th><th class="px-4 py-3 text-center">Status</th></tr></thead>
+                                <tbody>
+                                    <tr v-for="trx in filteredTransaksi" :key="trx.ID" class="border-b hover:bg-gray-50">
+                                        <td class="px-4 py-3 font-semibold">{{ trx.ID }}</td><td class="px-4 py-3">{{ trx.Siswa }}</td><td class="px-4 py-3">{{ trx.Buku }}</td>
+                                        <td class="px-4 py-3"><p class="text-xs">Pinjam: <b>{{ trx.TglPinjam }}</b></p><p class="text-xs text-gray-500">Batas: {{ trx.LamaPinjam }} Hr</p><p v-if="trx.StatusTransaksi === 'Selesai'" class="text-xs text-blue-600 mt-1">Kmbl: <b>{{ trx.TglKembali }}</b></p></td>
+                                        <td class="px-4 py-3 text-center font-bold"><span v-if="trx.Denda > 0" class="text-red-600 bg-red-100 px-2 py-1 rounded">Rp {{ trx.Denda.toLocaleString('id-ID') }}</span><span v-else>-</span></td>
+                                        <td class="px-4 py-3 text-center"><select v-model="trx.StatusTransaksi" @change="ubahStatus(trx.ID, trx.StatusTransaksi)" class="text-[10px] md:text-xs font-bold border rounded px-2 py-1 cursor-pointer" :class="trx.StatusTransaksi === 'Selesai' ? 'bg-green-100 text-green-700 border-green-300' : 'bg-orange-100 text-orange-700 border-orange-300'"><option value="Meminjam">Meminjam</option><option value="Selesai">Selesai</option></select></td>
+                                    </tr>
+                                    <tr v-if="filteredTransaksi.length === 0"><td colspan="6" class="text-center py-8 text-gray-500">Tidak ada transaksi.</td></tr>
+                                </tbody></table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- DATABASE BUKU -->
+                    <div v-if="activeMenu === 'databuku'" class="bg-white rounded-xl shadow overflow-hidden flex flex-col h-full">
+                        <div class="p-4 bg-gray-50 flex flex-col md:flex-row justify-between border-b gap-4">
+                            <div class="flex gap-2"><select v-model="filterKategoriBuku" class="border border-gray-300 rounded px-2 py-1.5 text-xs"><option value="">Kategori</option><option v-for="kat in daftarKategori" :key="kat" :value="kat">{{ kat }}</option></select><select v-model="filterRakBuku" class="border border-gray-300 rounded px-2 py-1.5 text-xs"><option value="">Rak</option><option v-for="rak in daftarRak" :key="rak" :value="rak">{{ rak }}</option></select></div>
+                            <div class="flex gap-2"><button @click="downloadLaporanBukuPDF" class="bg-ywka-green text-white px-3 py-1.5 text-xs rounded shadow font-bold"><i class="fas fa-file-pdf mr-1"></i> Cetak PDF</button><button @click="bukaForm('buku')" class="bg-ywka-blue text-white px-3 py-1.5 text-xs rounded shadow font-bold"><i class="fas fa-plus mr-1"></i> Tambah Buku</button></div>
+                        </div>
+                        <div class="overflow-x-auto flex-1">
+                            <table class="w-full text-left text-xs md:text-sm whitespace-nowrap"><thead class="bg-gray-100"><tr><th class="px-4 py-3 text-center">Cover</th><th class="px-4 py-3">Judul & ID</th><th class="px-4 py-3">Kategori</th><th class="px-4 py-3 text-center">Rak</th><th class="px-4 py-3 text-center">Stok</th><th class="px-4 py-3 text-center">Aksi</th></tr></thead>
+                                <tbody>
+                                    <tr v-for="buku in filteredBuku" :key="buku.KodeBuku" class="border-b hover:bg-blue-50">
+                                        <td class="px-4 py-2 text-center"><img v-if="buku.Gambar" :src="buku.Gambar" class="h-16 w-12 object-cover border mx-auto shadow-sm rounded"><div v-else class="h-16 w-12 bg-gray-200 border mx-auto flex items-center justify-center text-gray-400 rounded"><i class="fas fa-book"></i></div></td>
+                                        <td class="px-4 py-2"><p class="font-bold text-ywka-blue text-xs mb-1">{{ buku.KodeBuku }}</p><p class="font-bold text-gray-800">{{ buku.Judul }}</p><p class="text-[10px] text-gray-500">{{ buku.Pengarang }} ({{ buku.Tahun }})</p></td>
+                                        <td class="px-4 py-2"><span class="bg-blue-100 text-blue-800 text-[10px] font-semibold px-2 py-0.5 rounded">{{ buku.Kategori }}</span></td><td class="px-4 py-2 text-center font-bold">{{ buku.Rak }}</td><td class="px-4 py-2 text-center"><span :class="buku.Stok <= 0 ? 'bg-red-500' : 'bg-ywka-green'" class="text-white px-2 py-1 rounded-full shadow-sm">{{ buku.Stok }}</span></td>
+                                        <td class="px-4 py-2 text-center"><button @click="cetakLabelBuku(buku)" class="bg-gray-800 text-white p-1.5 rounded mr-1" title="Cetak QR"><i class="fas fa-print"></i></button><button @click="editBuku(buku)" class="text-blue-500 bg-blue-50 p-1.5 rounded mr-1"><i class="fas fa-edit"></i></button><button @click="hapusData('buku', 'KodeBuku', buku.KodeBuku)" class="text-red-500 bg-red-50 p-1.5 rounded"><i class="fas fa-trash"></i></button></td>
+                                    </tr>
+                                </tbody></table>
+                        </div>
+                    </div>
+
+                    <!-- DATABASE SISWA -->
+                    <div v-if="activeMenu === 'datasiswa'" class="bg-white rounded-xl shadow overflow-hidden flex flex-col h-full">
+                        <div class="p-4 bg-gray-50 flex justify-between border-b"><button @click="bukaForm('siswa')" class="bg-ywka-green text-white px-4 py-2 text-sm rounded shadow font-bold"><i class="fas fa-user-plus mr-2"></i>Daftarkan Siswa</button></div>
+                        <div class="overflow-x-auto flex-1">
+                            <table class="w-full text-left text-sm whitespace-nowrap"><thead class="bg-gray-100"><tr><th class="px-4 py-3 text-center">Foto</th><th class="px-4 py-3">NIS</th><th class="px-4 py-3">Nama</th><th class="px-4 py-3">Kelas</th><th class="px-4 py-3">Status</th><th class="px-4 py-3 text-center">Aksi</th></tr></thead>
+                                <tbody>
+                                    <tr v-for="siswa in filteredSiswa" :key="siswa.NIS" class="border-b hover:bg-gray-50">
+                                        <td class="px-4 py-2 text-center"><img v-if="siswa.Foto" :src="siswa.Foto" class="h-10 w-8 object-cover border mx-auto rounded shadow-sm"><div v-else class="h-10 w-8 bg-gray-200 mx-auto rounded"></div></td>
+                                        <td class="px-4 py-3 font-medium">{{ siswa.NIS }}</td><td class="px-4 py-3 font-bold">{{ siswa.Nama }}</td><td class="px-4 py-3">{{ siswa.Kelas }}</td><td class="px-4 py-3"><span :class="siswa.Status === 'Aktif' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'" class="px-2 py-1 rounded text-xs font-bold">{{ siswa.Status }}</span></td>
+                                        <td class="px-4 py-3 text-center"><button @click="cetakKartuSiswa(siswa)" class="bg-ywka-blue text-white px-2 py-1 rounded shadow text-xs mr-2"><i class="fas fa-id-card"></i> Cetak</button><button @click="editSiswa(siswa)" class="text-blue-500 bg-blue-50 p-1.5 rounded mr-1"><i class="fas fa-edit"></i></button><button @click="hapusData('siswa', 'NIS', siswa.NIS)" class="text-red-500 bg-red-50 p-1.5 rounded"><i class="fas fa-trash"></i></button></td>
+                                    </tr>
+                                </tbody></table>
+                        </div>
+                    </div>
+
+                    <!-- PENGATURAN -->
+                    <div v-if="activeMenu === 'pengaturan'" class="space-y-6 pb-10">
+                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                            <div class="bg-white rounded-xl shadow border-t-4 border-ywka-orange p-6 space-y-4">
+                                <h3 class="font-bold text-gray-800 border-b pb-2"><i class="fas fa-balance-scale mr-2"></i> Aturan Sistem</h3>
+                                <div><label class="block text-sm font-semibold mb-1">Batas Pinjam (Hari)</label><input type="number" v-model="formPengaturan.LamaPinjam" class="w-full border rounded px-4 py-2 outline-none font-bold"></div>
+                                <div><label class="block text-sm font-semibold mb-1">Denda per Hari (Rp)</label><input type="number" v-model="formPengaturan.DendaPerHari" class="w-full border rounded px-4 py-2 outline-none font-bold text-red-600"></div>
+                            </div>
+                            <div class="bg-white rounded-xl shadow border-t-4 border-ywka-blue p-6 space-y-4">
+                                <h3 class="font-bold text-gray-800 border-b pb-2"><i class="fas fa-file-pdf mr-2"></i> Format Laporan</h3>
+                                <div><label class="block text-sm font-semibold mb-1">Nama Kepala Perpus</label><input type="text" v-model="formPengaturan.KepalaPerpus" class="w-full border rounded px-4 py-2 outline-none"></div>
+                                <div><label class="block text-sm font-semibold mb-1">NIP Kepala Perpus</label><input type="text" v-model="formPengaturan.NIP" class="w-full border rounded px-4 py-2 outline-none"></div>
+                                <div>
+                                    <label class="block text-sm font-semibold mb-1">Kop Surat (Gambar)</label>
+                                    <input type="file" @change="prosesFileKop" accept="image/*" class="text-xs">
+                                    <img v-if="formPengaturan.KopSurat" :src="formPengaturan.KopSurat" class="mt-2 h-16 object-contain border p-1 rounded">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="text-right"><button @click="simpanPengaturan" class="bg-gray-800 text-white px-8 py-3 rounded-lg shadow-lg font-bold"><i class="fas fa-save mr-2"></i> Simpan Pengaturan</button></div>
+                        <div class="bg-white rounded-xl shadow mt-8 p-4">
+                            <div class="flex justify-between items-center mb-4"><h3 class="font-bold"><i class="fas fa-user-shield"></i> Akun Petugas</h3><button @click="bukaFormUser()" class="bg-ywka-green text-white px-3 py-1.5 rounded text-sm font-bold">Tambah</button></div>
+                            <table class="w-full text-left text-sm"><thead class="bg-gray-100"><tr><th class="px-4 py-2">Nama</th><th class="px-4 py-2">Email</th><th class="px-4 py-2">Hak Akses</th><th class="px-4 py-2">Aksi</th></tr></thead><tbody><tr v-for="u in dataUsers" class="border-b"><td class="px-4 py-2 font-bold">{{ u.nama }}</td><td class="px-4 py-2">{{ u.email }}</td><td class="px-4 py-2">{{ u.role }}</td><td class="px-4 py-2"><button @click="hapusData('users', 'email', u.email)" class="text-red-500 font-bold">Hapus</button></td></tr></tbody></table>
+                        </div>
+                    </div>
+                </div>
+            </main>
+
+            <!-- MODAL FORM POPUP -->
+            <div v-if="showModal" class="absolute inset-0 bg-black bg-opacity-60 flex justify-center items-center z-50 p-4">
+                <div class="bg-white rounded-xl shadow-2xl p-5 w-full max-w-lg border-t-8 border-ywka-blue relative">
+                    <button @click="showModal = false" class="absolute top-4 right-4 text-gray-400 text-2xl"><i class="fas fa-times"></i></button>
+                    
+                    <form v-if="modalType === 'buku'" @submit.prevent="simpanBuku" class="space-y-3 mt-4">
+                        <h3 class="font-bold text-lg mb-4">{{ isEditMode ? 'Edit Buku' : 'Tambah Buku' }}</h3>
+                        <div class="grid grid-cols-2 gap-3"><div><label class="text-xs font-bold">ID / ISBN</label><input type="text" v-model="formBuku.kode" required class="w-full border rounded p-2" :readonly="isEditMode"></div><div><label class="text-xs font-bold">Kategori</label><input type="text" v-model="formBuku.kategori" required class="w-full border rounded p-2"></div></div>
+                        <div><label class="text-xs font-bold">Judul Buku</label><input type="text" v-model="formBuku.judul" required class="w-full border rounded p-2"></div>
+                        <div><label class="text-xs font-bold">Pengarang</label><input type="text" v-model="formBuku.pengarang" required class="w-full border rounded p-2"></div>
+                        <div class="grid grid-cols-2 gap-3"><div><label class="text-xs font-bold">Penerbit</label><input type="text" v-model="formBuku.penerbit" required class="w-full border rounded p-2"></div><div><label class="text-xs font-bold">Tahun</label><input type="number" v-model="formBuku.tahun" required class="w-full border rounded p-2"></div></div>
+                        <div class="grid grid-cols-2 gap-3"><div><label class="text-xs font-bold">Rak</label><input type="text" v-model="formBuku.rak" required class="w-full border rounded p-2"></div><div><label class="text-xs font-bold">Stok</label><input type="number" v-model="formBuku.stok" required class="w-full border rounded p-2"></div></div>
+                        <div class="border p-2 bg-gray-50 rounded"><label class="text-xs font-bold block mb-1">Kamera / File Cover Buku</label><input type="file" @change="e => prosesUploadStorage(e, 'buku')" accept="image/*" class="text-xs"><div v-if="formBuku.Gambar" class="mt-2 text-xs text-green-600 font-bold"><i class="fas fa-check"></i> Foto siap</div></div>
+                        <button type="submit" class="w-full bg-ywka-blue text-white py-2 rounded font-bold mt-2">Simpan</button>
+                    </form>
+
+                    <form v-if="modalType === 'siswa'" @submit.prevent="simpanSiswa" class="space-y-3 mt-4">
+                        <h3 class="font-bold text-lg mb-4">{{ isEditMode ? 'Edit Siswa' : 'Tambah Siswa' }}</h3>
+                        <div><label class="text-xs font-bold">NIS</label><input type="text" v-model="formSiswa.nis" required class="w-full border rounded p-2" :readonly="isEditMode"></div>
+                        <div><label class="text-xs font-bold">Nama Lengkap</label><input type="text" v-model="formSiswa.nama" required class="w-full border rounded p-2"></div>
+                        <div class="grid grid-cols-2 gap-3"><div><label class="text-xs font-bold">Kelas</label><input type="text" v-model="formSiswa.kelas" required class="w-full border rounded p-2"></div><div v-if="isEditMode"><label class="text-xs font-bold">Status</label><select v-model="formSiswa.status" class="w-full border rounded p-2"><option value="Aktif">Aktif</option><option value="Nonaktif">Nonaktif</option></select></div></div>
+                        <div class="border p-2 bg-gray-50 rounded"><label class="text-xs font-bold block mb-1">Kamera / Foto Wajah Siswa</label><input type="file" @change="e => prosesUploadStorage(e, 'siswa')" accept="image/*" capture="user" class="text-xs"><div v-if="formSiswa.Foto" class="mt-2 text-xs text-green-600 font-bold"><i class="fas fa-check"></i> Foto siap</div></div>
+                        <button type="submit" class="w-full bg-ywka-green text-white py-2 rounded font-bold mt-2">Simpan</button>
+                    </form>
+
+                    <form v-if="modalType === 'transaksi'" @submit.prevent="simpanTransaksi" class="space-y-4 mt-4">
+                        <h3 class="font-bold text-lg mb-4">Peminjaman Baru</h3>
+                        <div><label class="text-xs font-bold">ID Transaksi</label><input type="text" v-model="formTransaksi.id" readonly class="w-full border bg-gray-100 rounded p-2 text-gray-500 font-mono"></div>
+                        <div><label class="text-xs font-bold">Pilih Siswa</label><select v-model="formTransaksi.siswa" required class="w-full border rounded p-2"><option v-for="s in dataSiswa.filter(x=>x.Status==='Aktif')" :value="s.Nama + ' (' + s.Kelas + ')'">{{ s.NIS }} - {{ s.Nama }}</option></select></div>
+                        <div><label class="text-xs font-bold">Pilih Buku</label><select v-model="formTransaksi.bukuKode" required class="w-full border rounded p-2"><option v-for="b in dataBuku" :value="b.KodeBuku" :disabled="b.Stok<=0">{{ b.KodeBuku }} - {{ b.Judul }} (Sisa: {{b.Stok}})</option></select></div>
+                        <div><label class="text-xs font-bold">Lama Pinjam (Hari)</label><input type="number" v-model="formTransaksi.lamaPinjam" class="w-full border rounded p-2 font-bold text-ywka-orange"></div>
+                        <button type="submit" class="w-full bg-ywka-orange text-white py-2 rounded font-bold mt-2">Proses Peminjaman</button>
+                    </form>
+                    
+                    <form v-if="modalType === 'user'" @submit.prevent="simpanUser" class="space-y-4 mt-4">
+                        <h3 class="font-bold text-lg mb-4">Akun Baru</h3>
+                        <div><label class="text-xs font-bold">Email</label><input type="email" v-model="formUser.email" required class="w-full border rounded p-2"></div>
+                        <div><label class="text-xs font-bold">Password</label><input type="text" v-model="formUser.password" required class="w-full border rounded p-2"></div>
+                        <div><label class="text-xs font-bold">Nama</label><input type="text" v-model="formUser.nama" required class="w-full border rounded p-2"></div>
+                        <button type="submit" class="w-full bg-ywka-blue text-white py-2 rounded font-bold mt-2">Simpan</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ==========================================
+        // GANTI DENGAN PROJECT URL & ANON KEY SUPABASE ANDA
+        // ==========================================
+        const SUPABASE_URL = "https://cruwuiujfqcnmychyzgu.supabase.co/rest/v1/";
+        const SUPABASE_KEY = "sb_publishable_JWSQrGJgtmOCobYeqUBnjw_kYAqiRC4";
+        const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        const { createApp, ref, computed, onMounted } = Vue
+        createApp({
+            setup() {
+                const isLoggedIn = ref(false); const loginData = ref({ email: '', password: '' }); const loginError = ref(''); const loadingLogin = ref(false); const currentUser = ref({ nama: '', role: '', email: '' });
+                const activeMenu = ref('dashboard'); const loading = ref(false); const searchQuery = ref(''); const mobileMenuOpen = ref(false);
+                const isMobile = computed(() => window.innerWidth < 768);
+
+                const dataBuku = ref([]); const dataSiswa = ref([]); const dataTransaksi = ref([]); const dataUsers = ref([]); const statistik = ref({ totalBuku: 0, totalSiswa: 0, peminjamanAktif: 0 });
+                const formPengaturan = ref({ LamaPinjam: 3, DendaPerHari: 5000, KepalaPerpus: '', NIP: '', KopSurat: '' });
+                const showModal = ref(false); const modalType = ref('buku'); const isEditMode = ref(false); 
+                
+                const formBuku = ref({ kode: '', judul: '', pengarang: '', penerbit: '', tahun: '', kategori: '', rak: '', stok: 1, Gambar: '', file: null }); 
+                const formSiswa = ref({ nis: '', nama: '', kelas: '', status: 'Aktif', Foto: '', file: null }); 
+                const formTransaksi = ref({ id: '', siswa: '', bukuKode: '', lamaPinjam: 3 });
+                const formUser = ref({ email: '', password: '', nama: '', role: 'Petugas' });
+
+                const filterBulan = ref(''); const filterKategoriBuku = ref(''); const filterRakBuku = ref('');
+                const daftarBulan = computed(() => { const b = new Set(); dataTransaksi.value.forEach(t => { if (t.TglPinjam && t.TglPinjam !== '-') b.add(t.TglPinjam.substring(3)); }); return Array.from(b).map(v => ({ value: v, label: v })); });
+                const filteredTransaksi = computed(() => dataTransaksi.value.filter(t => !filterBulan.value || t.TglPinjam.includes(filterBulan.value) || t.TglKembali.includes(filterBulan.value)));
+                const daftarKategori = computed(() => { const k = new Set(); dataBuku.value.forEach(b => k.add(b.Kategori)); return Array.from(k).sort(); });
+                const daftarRak = computed(() => { const r = new Set(); dataBuku.value.forEach(b => r.add(b.Rak)); return Array.from(r).sort(); });
+                const filteredBuku = computed(() => dataBuku.value.filter(b => (!filterKategoriBuku.value || b.Kategori === filterKategoriBuku.value) && (!filterRakBuku.value || b.Rak === filterRakBuku.value) && (!searchQuery.value || b.Judul.toLowerCase().includes(searchQuery.value.toLowerCase()) || b.KodeBuku.toLowerCase().includes(searchQuery.value.toLowerCase()))));
+                const filteredSiswa = computed(() => dataSiswa.value.filter(s => !searchQuery.value || s.Nama.toLowerCase().includes(searchQuery.value.toLowerCase()) || s.NIS.toLowerCase().includes(searchQuery.value.toLowerCase())));
+
+                const menuTitle = computed(() => activeMenu.value === 'dashboard' ? 'Dashboard' : activeMenu.value === 'databuku' ? 'Data Buku' : activeMenu.value === 'datasiswa' ? 'Data Siswa' : 'Pengaturan');
+                const changeMenu = (menu) => { activeMenu.value = menu; mobileMenuOpen.value = false; }
+                const logout = () => { isLoggedIn.value = false; }
+
+                // PENGAMBILAN DATA DARI SUPABASE
+                const fetchSemuaData = async () => {
+                    loading.value = true;
+                    const [resB, resS, resT, resU, resP] = await Promise.all([
+                        supabase.from('buku').select('*'), supabase.from('siswa').select('*'),
+                        supabase.from('transaksi').select('*'), supabase.from('users').select('*'),
+                        supabase.from('pengaturan').select('*').eq('id', 1).single()
+                    ]);
+                    dataBuku.value = resB.data || []; dataSiswa.value = resS.data || []; 
+                    dataTransaksi.value = (resT.data || []).reverse(); dataUsers.value = resU.data || [];
+                    if(resP.data) formPengaturan.value = resP.data;
+                    statistik.value = { totalBuku: dataBuku.value.length, totalSiswa: dataSiswa.value.length, peminjamanAktif: dataTransaksi.value.filter(t => t.StatusTransaksi === 'Meminjam').length };
+                    loading.value = false; showModal.value = false;
+                }
+
+                const prosesLogin = async () => {
+                    loadingLogin.value = true; loginError.value = '';
+                    const { data } = await supabase.from('users').select('*').eq('email', loginData.value.email).eq('password', loginData.value.password).single();
+                    if (data) { currentUser.value = data; isLoggedIn.value = true; await fetchSemuaData(); } 
+                    else { loginError.value = "Email / Password Salah!"; }
+                    loadingLogin.value = false;
+                }
+
+                // UPLOAD FILE KE SUPABASE STORAGE
+                const uploadBerkas = async (file, folder) => {
+                    if (!file) return null;
+                    const fName = `${folder}/${Date.now()}_${file.name.replace(/[^a-zA-Z0-9.]/g, '')}`;
+                    await supabase.storage.from('berkas').upload(fName, file);
+                    return supabase.storage.from('berkas').getPublicUrl(fName).data.publicUrl;
+                }
+                const prosesUploadStorage = (e, target) => { 
+                    const file = e.target.files[0]; 
+                    if(!file) return; 
+                    if(target==='buku') { formBuku.value.file = file; formBuku.value.Gambar = 'pending'; }
+                    if(target==='siswa') { formSiswa.value.file = file; formSiswa.value.Foto = 'pending'; }
+                }
+                const prosesFileKop = async (e) => {
+                    loading.value = true;
+                    const url = await uploadBerkas(e.target.files[0], 'kop');
+                    if(url) formPengaturan.value.KopSurat = url;
+                    loading.value = false;
+                }
+
+                // SIMPAN DATA
+                const simpanPengaturan = async () => { loading.value = true; await supabase.from('pengaturan').update(formPengaturan.value).eq('id', 1); await fetchSemuaData(); alert("Disimpan!"); }
+                const simpanUser = async () => { loading.value = true; await supabase.from('users').insert(formUser.value); await fetchSemuaData(); }
+                const hapusData = async (tabel, kolom, id) => { if(confirm("Hapus data ini?")) { loading.value = true; await supabase.from(tabel).delete().eq(kolom, id); await fetchSemuaData(); } }
+                
+                const simpanBuku = async () => {
+                    loading.value = true;
+                    if(formBuku.value.file) { formBuku.value.Gambar = await uploadBerkas(formBuku.value.file, 'buku'); }
+                    const qrUrl = "https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=" + encodeURIComponent(formBuku.value.kode);
+                    const p = { KodeBuku: formBuku.value.kode, Judul: formBuku.value.judul, Pengarang: formBuku.value.pengarang, Penerbit: formBuku.value.penerbit, Tahun: formBuku.value.tahun, Kategori: formBuku.value.kategori, Rak: formBuku.value.rak, Stok: formBuku.value.stok, QRCode: qrUrl, Gambar: formBuku.value.Gambar!=='pending'?formBuku.value.Gambar:'' };
+                    await supabase.from('buku').upsert(p); await fetchSemuaData();
+                }
+                
+                const simpanSiswa = async () => {
+                    loading.value = true;
+                    if(formSiswa.value.file) { formSiswa.value.Foto = await uploadBerkas(formSiswa.value.file, 'siswa'); }
+                    await supabase.from('siswa').upsert({ NIS: formSiswa.value.nis, Nama: formSiswa.value.nama, Kelas: formSiswa.value.kelas, Status: formSiswa.value.status, Foto: formSiswa.value.Foto!=='pending'?formSiswa.value.Foto:'' }); 
+                    await fetchSemuaData();
+                }
+
+                const simpanTransaksi = async () => {
+                    loading.value = true; const bk = dataBuku.value.find(b => b.KodeBuku === formTransaksi.value.bukuKode);
+                    if (!bk) { alert("Pilih buku!"); loading.value=false; return; }
+                    await supabase.from('transaksi').insert({ ID: formTransaksi.value.id, Siswa: formTransaksi.value.siswa, Buku: `${bk.Judul} (${bk.KodeBuku})`, TglPinjam: new Date().toLocaleDateString('en-GB'), StatusTransaksi: 'Meminjam', TglKembali: '-', LamaPinjam: formTransaksi.value.lamaPinjam, Denda: 0, Hidden: '' });
+                    await supabase.from('buku').update({ Stok: bk.Stok - 1 }).eq('KodeBuku', bk.KodeBuku); await fetchSemuaData();
+                }
+
+                const ubahStatus = async (id, stat) => {
+                    loading.value = true; const trx = dataTransaksi.value.find(t => t.ID === id); const bkKode = trx.Buku.match(/\((.*?)\)$/)[1]; const bk = dataBuku.value.find(b => b.KodeBuku === bkKode);
+                    if (stat === 'Selesai') {
+                        let denda = 0; try { const parts = trx.TglPinjam.split('/'); const selisihHari = Math.floor((new Date().setHours(0,0,0,0) - new Date(parts[2], parts[1]-1, parts[0])) / 86400000); if(selisihHari > trx.LamaPinjam) denda = (selisihHari - trx.LamaPinjam) * formPengaturan.value.DendaPerHari; }catch(e){}
+                        await supabase.from('transaksi').update({ StatusTransaksi: 'Selesai', TglKembali: new Date().toLocaleDateString('en-GB'), Denda: denda }).eq('ID', id);
+                        if(bk) await supabase.from('buku').update({ Stok: bk.Stok + 1 }).eq('KodeBuku', bkKode);
+                    } else {
+                        await supabase.from('transaksi').update({ StatusTransaksi: 'Meminjam', TglKembali: '-', Denda: 0 }).eq('ID', id);
+                        if(bk) await supabase.from('buku').update({ Stok: bk.Stok - 1 }).eq('KodeBuku', bkKode);
+                    }
+                    await fetchSemuaData();
+                }
+
+                const hapusSemuaRiwayat = async () => { if(confirm("Hapus semua riwayat transaksi?") && prompt("Pass:") === 'ywka123') { loading.value=true; await supabase.from('transaksi').delete().neq('ID', '0'); await fetchSemuaData(); } }
+
+                // CETAK PDF & KARTU (Sekarang super cepat tanpa server!)
+                const funcPrint = (htmlBody, title) => { const win = window.open('', '_blank'); win.document.write(`<!DOCTYPE html><html><head><title>${title}</title><style>@media print { @page { margin: 0; } body{margin:0;padding-top:20px;font-family:Arial;} } body{font-family:Arial;} table{width:100%;border-collapse:collapse;margin-top:10px;font-size:11px} th{background:#071a9e;color:white;padding:8px;border:1px solid #000} td{padding:6px;border:1px solid #000}</style></head><body>${htmlBody}<script>setTimeout(()=>window.print(), 500);<\/script></body></html>`); win.document.close(); }
+                const getKop = () => formPengaturan.value.KopSurat ? `<img src="${formPengaturan.value.KopSurat}" style="width:100%;display:block;margin:0;">` : `<h2 style="text-align:center">SMA YWKA BANDUNG</h2><hr style="border:1px solid #000">`;
+                const getTTD = () => `<div style="width:300px;float:right;text-align:center;margin-top:30px;font-size:11px"><p>Bandung, ${new Date().toLocaleDateString('id-ID')}<br>Kepala Perpustakaan,</p><br><br><br><p style="font-weight:bold;text-decoration:underline;margin-bottom:2px">${formPengaturan.value.KepalaPerpus}</p><p style="margin-top:0">NIP/NIK. ${formPengaturan.value.NIP}</p></div>`;
+                
+                const downloadLaporanBukuPDF = () => {
+                    let rows = ''; filteredBuku.value.forEach((b, i) => rows += `<tr><td style="text-align:center">${i+1}</td><td>${b.KodeBuku}</td><td style="font-weight:bold">${b.Judul}</td><td>${b.Pengarang}</td><td style="text-align:center">${b.Kategori}</td><td style="text-align:center;font-weight:bold">${b.Rak}</td><td style="text-align:center">${b.Stok}</td></tr>`);
+                    funcPrint(`${getKop()}<div style="padding:10px 40px"><h4 style="text-align:center">LAPORAN STOK BUKU</h4><table><thead><tr><th>NO</th><th>ID BUKU</th><th>JUDUL</th><th>PENGARANG</th><th>KATEGORI</th><th>RAK</th><th>STOK</th></tr></thead><tbody>${rows||'<tr><td colspan="7" style="text-align:center">Kosong</td></tr>'}</tbody></table>${getTTD()}</div>`, "Laporan Buku");
+                }
+                const downloadLaporanTransaksi = () => {
+                    let rows = ''; filteredTransaksi.value.forEach((t, i) => rows += `<tr><td style="text-align:center">${i+1}</td><td>${t.ID}</td><td>${t.Siswa}</td><td>${t.Buku}</td><td style="text-align:center">${t.TglPinjam}</td><td style="text-align:center">${t.TglKembali}</td><td style="text-align:center">${t.Denda>0?'Rp '+t.Denda:'-'}</td><td style="text-align:center;font-weight:bold">${t.StatusTransaksi}</td></tr>`);
+                    funcPrint(`${getKop()}<div style="padding:10px 40px"><h4 style="text-align:center">LAPORAN TRANSAKSI</h4><table><thead><tr><th>NO</th><th>ID TRX</th><th>SISWA</th><th>BUKU</th><th>PINJAM</th><th>KEMBALI</th><th>DENDA</th><th>STATUS</th></tr></thead><tbody>${rows||'<tr><td colspan="8" style="text-align:center">Kosong</td></tr>'}</tbody></table>${getTTD()}</div>`, "Laporan Transaksi");
+                }
+                const cetakLabelBuku = (b) => funcPrint(`<div style="width:5cm;border:2px solid #000;padding:10px;text-align:center;border-radius:8px;margin:20px auto"><img src="${b.QRCode}" style="width:3.5cm;height:3.5cm;margin-bottom:5px"><p style="font-size:14px;font-weight:bold;margin:0 0 5px 0;color:#071a9e">${b.KodeBuku}</p><p style="font-size:12px;font-weight:bold;margin:0 0 5px 0;text-transform:uppercase">${b.Judul.substring(0,30)}</p><p style="font-size:10px;margin:0 0 3px 0">${b.Rak}</p></div>`, "Label "+b.KodeBuku);
+                const cetakKartuSiswa = (s) => funcPrint(`<div style="width:5.4cm;height:8.6cm;border:2px solid #071a9e;border-radius:8px;text-align:center;overflow:hidden;position:relative;margin:20px auto"><div style="background:#071a9e;color:white;padding:10px 5px;font-size:10px;font-weight:bold">PERPUSTAKAAN DIGITAL<br>SMA YWKA</div><div style="width:2.5cm;height:3cm;background:#e2e8f0;margin:10px auto;border:1px solid #ccc;display:flex;align-items:center;justify-content:center;overflow:hidden">${s.Foto?`<img src="${s.Foto}" style="width:100%;height:100%;object-fit:cover">`:'FOTO'}</div><div style="font-size:12px;font-weight:900;color:#071a9e;text-transform:uppercase">${s.Nama}</div><div style="font-size:11px;font-weight:bold;margin-bottom:5px">${s.NIS} | ${s.Kelas}</div><img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${s.NIS}" style="width:2.2cm;height:2.2cm"><div style="position:absolute;bottom:0;width:100%;background:#fd5203;color:white;font-size:8px;padding:4px 0;font-weight:bold">KARTU ANGGOTA</div></div>`, "Kartu "+s.Nama);
+
+                const bukaForm = (tipe) => { modalType.value = tipe; showModal.value = true; isEditMode.value = false; if(tipe === 'buku') formBuku.value = { kode: '', judul: '', pengarang: '', penerbit: '', tahun: '', kategori: '', rak: '', stok: 1, Gambar: '', file: null }; if(tipe === 'siswa') formSiswa.value = { nis: '', nama: '', kelas: '', status: 'Aktif', Foto: '', file: null }; if(tipe === 'transaksi') formTransaksi.value = { id: 'TRX-' + Math.floor(Math.random() * 100000), siswa: '', bukuKode: '', lamaPinjam: formPengaturan.value.LamaPinjam }; }
+                const editBuku = (buku) => { modalType.value = 'buku'; isEditMode.value = true; formBuku.value = { kode: buku.KodeBuku, judul: buku.Judul, pengarang: buku.Pengarang, penerbit: buku.Penerbit, tahun: buku.Tahun, kategori: buku.Kategori, rak: buku.Rak, stok: parseInt(buku.Stok) || 0, Gambar: buku.Gambar, file: null }; showModal.value = true; }
+                const editSiswa = (siswa) => { modalType.value = 'siswa'; isEditMode.value = true; formSiswa.value = { nis: siswa.NIS, nama: siswa.Nama, kelas: siswa.Kelas, status: siswa.Status, Foto: siswa.Foto, file: null }; showModal.value = true; }
+                const bukaFormUser = () => { modalType.value = 'user'; showModal.value = true; formUser.value = { email: '', password: '', nama: '', role: 'Petugas' }; }
+
+                return { isLoggedIn, loginData, loginError, loadingLogin, currentUser, prosesLogin, logout, activeMenu, menuTitle, loading, searchQuery, filteredBuku, filteredSiswa, dataTransaksi, filteredTransaksi, filterBulan, daftarBulan, statistik, formPengaturan, dataUsers, showModal, modalType, isEditMode, formBuku, formSiswa, formTransaksi, formUser, changeMenu, isMobile, mobileMenuOpen, filterKategoriBuku, filterRakBuku, daftarKategori, daftarRak, selectedBuku, bukaForm, bukaFormUser, editBuku, editSiswa, prosesUploadStorage, prosesFileKop, simpanUser, hapusData, simpanPengaturan, simpanBuku, simpanSiswa, simpanTransaksi, ubahStatus, downloadLaporanTransaksi, downloadLaporanBukuPDF, cetakLabelBuku, cetakKartuSiswa, dataSiswa, dataBuku, hapusSemuaRiwayat }
+            }
+        }).mount('#app')
+    </script>
+</body>
+</html>
