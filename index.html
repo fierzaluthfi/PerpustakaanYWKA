@@ -300,7 +300,12 @@
                 }
 
                 // SIMPAN DATA
-                const simpanPengaturan = async () => { loading.value = true; await supaClient.from('pengaturan').update(formPengaturan.value).eq('id', 1); await fetchSemuaData(); alert("Disimpan!"); }
+               const simpanPengaturan = async () => { 
+                    loading.value = true; 
+                    await supaClient.from('pengaturan').upsert({ id: 1, ...formPengaturan.value }); 
+                    await fetchSemuaData(); 
+                    alert("Disimpan!"); 
+                }
                 const simpanUser = async () => { loading.value = true; await supaClient.from('users').insert(formUser.value); await fetchSemuaData(); }
                 const hapusData = async (tabel, kolom, id) => { if(confirm("Hapus data ini?")) { loading.value = true; await supaClient.from(tabel).delete().eq(kolom, id); await fetchSemuaData(); } }
                 
