@@ -221,7 +221,7 @@
         // ==========================================
         const SUPABASE_URL = "https://cruwuiujfqcnmychyzgu.supabase.co/rest/v1/";
         const SUPABASE_KEY = "sb_publishable_JWSQrGJgtmOCobYeqUBnjw_kYAqiRC4";
-        const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        window.supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
         const { createApp, ref, computed, onMounted } = Vue
         createApp({
