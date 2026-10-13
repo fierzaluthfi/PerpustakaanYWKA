@@ -84,13 +84,48 @@
 
                         <div class="bg-white rounded-xl shadow overflow-hidden">
                             <div class="px-4 md:px-6 py-4 border-b bg-gray-50 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                                <div class="flex flex-wrap items-center gap-2"><h3 class="font-bold mr-2 text-sm md:text-base">Rekapan Transaksi</h3><select v-model="filterBulan" class="border border-gray-300 rounded px-2 py-1 text-xs md:text-sm"><option value="">Semua Bulan</option><option v-for="b in daftarBulan" :key="b.value" :value="b.value">{{ b.label }}</option></select></div>
+                                <div class="flex flex-wrap items-center gap-2"><h3 class="font-bold mr-2 text-sm md:text-base">Catatan Peminjaman</h3><select v-model="filterBulan" class="border border-gray-300 rounded px-2 py-1 text-xs md:text-sm"><option value="">Semua Waktu</option><option v-for="b in daftarBulan" :key="b.value" :value="b.value">{{ b.label }}</option></select></div>
                                 <div class="flex flex-wrap items-center gap-2 w-full md:w-auto">
-                                    <button @click="bukaForm('transaksi')" class="flex-1 bg-ywka-orange text-white px-3 py-1.5 rounded shadow font-bold hover:scale-105"><i class="fas fa-plus-circle mr-1"></i> Baru</button>
+                                    <button @click="bukaForm('transaksi')" class="flex-1 bg-ywka-orange text-white px-3 py-1.5 rounded shadow font-bold hover:scale-105"><i class="fas fa-plus-circle mr-1"></i> Peminjaman Baru</button>
+                                    
+                                    <!-- TOMBOL IMPORT CSV -->
+                                    <input type="file" accept=".csv" @change="importCSVTransaksi" class="hidden" ref="fileCsvTransaksi">
+                                    <button @click="$refs.fileCsvTransaksi.click()" class="flex-1 bg-gray-700 text-white px-3 py-1.5 rounded shadow font-bold" title="Import Data Lama"><i class="fas fa-file-csv mr-1"></i> Rekap CSV</button>
+                                    
                                     <button @click="downloadLaporanTransaksi" class="flex-1 bg-ywka-green text-white px-3 py-1.5 rounded shadow font-bold"><i class="fas fa-file-pdf mr-1"></i> PDF</button>
-                                    <button @click="hapusSemuaRiwayat" class="flex-1 text-red-600 hover:bg-red-100 px-3 py-1.5 rounded border border-red-200 font-bold"><i class="fas fa-trash-alt mr-1"></i> Clear</button>
                                 </div>
                             </div>
+                            <div class="overflow-x-auto">
+                                <table class="w-full text-left text-xs md:text-sm whitespace-nowrap">
+                                    <thead class="bg-gray-100">
+                                        <tr>
+                                            <th class="px-4 py-3">Tanggal Pinjam</th>
+                                            <th class="px-4 py-3">Nama Lengkap & Kelas</th>
+                                            <th class="px-4 py-3">Buku yang Dipinjam</th>
+                                            <th class="px-4 py-3">Waktu Pengembalian</th>
+                                            <th class="px-4 py-3 text-center">Kontak (No. HP)</th>
+                                            <th class="px-4 py-3 text-center">Ket. / Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr v-for="trx in filteredTransaksi" :key="trx.ID" class="border-b hover:bg-gray-50">
+                                            <td class="px-4 py-3 font-bold text-gray-700">{{ trx.TglPinjam }}</td>
+                                            <td class="px-4 py-3 font-semibold text-ywka-blue">{{ trx.Siswa }}</td>
+                                            <td class="px-4 py-3">{{ trx.Buku }}</td>
+                                            <td class="px-4 py-3 font-bold" :class="trx.StatusTransaksi === 'Selesai' ? 'text-blue-600' : 'text-gray-400'">{{ trx.TglKembali !== '-' ? trx.TglKembali : 'Belum Kembali' }}</td>
+                                            <td class="px-4 py-3 text-center font-mono text-gray-600">
+                                                {{ dataSiswa.find(s => trx.Siswa.includes(s.Nama))?.NoHP || '-' }}
+                                            </td>
+                                            <td class="px-4 py-3 text-center">
+                                                <select v-model="trx.StatusTransaksi" @change="ubahStatus(trx.ID, trx.StatusTransaksi)" class="text-[10px] md:text-xs font-bold border rounded px-2 py-1 cursor-pointer" :class="trx.StatusTransaksi === 'Selesai' ? 'bg-green-100 text-green-700 border-green-300' : 'bg-orange-100 text-orange-700 border-orange-300'"><option value="Meminjam">Meminjam</option><option value="Selesai">Selesai</option></select>
+                                                <p v-if="trx.Denda > 0" class="text-[10px] text-red-600 font-bold mt-1">Denda: Rp{{ trx.Denda }}</p>
+                                            </td>
+                                        </tr>
+                                        <tr v-if="filteredTransaksi.length === 0"><td colspan="6" class="text-center py-8 text-gray-500">Buku catatan kosong.</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
                             <div class="overflow-x-auto">
                                 <table class="w-full text-left text-xs md:text-sm whitespace-nowrap"><thead class="bg-gray-100"><tr><th class="px-4 py-3">ID</th><th class="px-4 py-3">Siswa</th><th class="px-4 py-3">Buku</th><th class="px-4 py-3">Waktu</th><th class="px-4 py-3 text-center">Denda</th><th class="px-4 py-3 text-center">Status</th></tr></thead>
                                 <tbody>
@@ -228,7 +263,11 @@
                         <h3 class="font-bold text-lg mb-4">{{ isEditMode ? 'Edit Siswa' : 'Tambah Siswa' }}</h3>
                         <div><label class="text-xs font-bold">NIS</label><input type="text" v-model="formSiswa.nis" required class="w-full border rounded p-2" :readonly="isEditMode"></div>
                         <div><label class="text-xs font-bold">Nama Lengkap</label><input type="text" v-model="formSiswa.nama" required class="w-full border rounded p-2"></div>
-                        <div class="grid grid-cols-2 gap-3"><div><label class="text-xs font-bold">Kelas</label><input type="text" v-model="formSiswa.kelas" required class="w-full border rounded p-2"></div><div v-if="isEditMode"><label class="text-xs font-bold">Status</label><select v-model="formSiswa.status" class="w-full border rounded p-2"><option value="Aktif">Aktif</option><option value="Nonaktif">Nonaktif</option></select></div></div>
+                        <div class="grid grid-cols-2 gap-3">
+                            <div><label class="text-xs font-bold">Kelas</label><input type="text" v-model="formSiswa.kelas" required class="w-full border rounded p-2"></div>
+                            <div><label class="text-xs font-bold">No. HP / WA</label><input type="text" v-model="formSiswa.nohp" class="w-full border rounded p-2" placeholder="08..."></div>
+                        </div>
+                        <div v-if="isEditMode"><label class="text-xs font-bold">Status</label><select v-model="formSiswa.status" class="w-full border rounded p-2"><option value="Aktif">Aktif</option><option value="Nonaktif">Nonaktif</option></select></div>
                         <div class="border p-2 bg-gray-50 rounded"><label class="text-xs font-bold block mb-1">Kamera / Foto Wajah Siswa</label><input type="file" @change="e => prosesUploadStorage(e, 'siswa')" accept="image/*" capture="user" class="text-xs"><div v-if="formSiswa.Foto" class="mt-2 text-xs text-green-600 font-bold"><i class="fas fa-check"></i> Foto siap</div></div>
                         <button type="submit" class="w-full bg-ywka-green text-white py-2 rounded font-bold mt-2">Simpan</button>
                     </form>
@@ -277,7 +316,7 @@
                 const selectedBuku = ref(null);
                 const lihatDetailBuku = (buku) => { selectedBuku.value = buku; modalType.value = 'detailBuku'; showModal.value = true; }
                 const formBuku = ref({ kode: '', judul: '', pengarang: '', penerbit: '', tahun: '', kategori: '', rak: '', stok: 1, Gambar: '', file: null }); 
-                const formSiswa = ref({ nis: '', nama: '', kelas: '', status: 'Aktif', Foto: '', file: null }); 
+                const formSiswa = ref({ nis: '', nama: '', kelas: '', nohp: '', status: 'Aktif', Foto: '', file: null }); 
                 const formTransaksi = ref({ id: '', siswa: '', bukuKode: '', lamaPinjam: 3 });
                 const formUser = ref({ email: '', password: '', nama: '', role: 'Petugas' });
 
@@ -378,7 +417,7 @@
                 const simpanSiswa = async () => {
                     loading.value = true;
                     if(formSiswa.value.file) { formSiswa.value.Foto = await uploadBerkas(formSiswa.value.file, 'siswa'); }
-                    await supaClient.from('siswa').upsert({ NIS: formSiswa.value.nis, Nama: formSiswa.value.nama, Kelas: formSiswa.value.kelas, Status: formSiswa.value.status, Foto: formSiswa.value.Foto!=='pending'?formSiswa.value.Foto:'' }); 
+                    await supaClient.from('siswa').upsert({ NIS: formSiswa.value.nis, Nama: formSiswa.value.nama, Kelas: formSiswa.value.kelas, NoHP: formSiswa.value.nohp, Status: formSiswa.value.status, Foto: formSiswa.value.Foto!=='pending'?formSiswa.value.Foto:'' }); 
                     await fetchSemuaData();
                 }
 
@@ -401,7 +440,44 @@
                     }
                     await fetchSemuaData();
                 }
-
+                const importCSVTransaksi = (e) => {
+                    const file = e.target.files[0];
+                    if (!file) return;
+                    const reader = new FileReader();
+                    reader.onload = async (event) => {
+                        loading.value = true;
+                        const text = event.target.result;
+                        const baris = text.split('\n');
+                        const dataBaru = [];
+                        
+                        // Loop baris CSV (Lewati baris 0 karena itu judul kolom/header)
+                        for (let i = 1; i < baris.length; i++) {
+                            if(!baris[i].trim()) continue;
+                            const kolom = baris[i].split(','); 
+                            
+                            dataBaru.push({
+                                ID: 'TRX-OLD-' + Math.floor(Math.random() * 1000000) + i,
+                                Siswa: kolom[0] ? kolom[0].trim() : '-',
+                                Buku: kolom[1] ? kolom[1].trim() : '-',
+                                TglPinjam: kolom[2] ? kolom[2].trim() : '-',
+                                TglKembali: kolom[3] ? kolom[3].trim() : '-',
+                                StatusTransaksi: (kolom[4] && kolom[4].trim() !== '') ? kolom[4].trim() : 'Selesai',
+                                LamaPinjam: formPengaturan.value.LamaPinjam || 3,
+                                Denda: 0,
+                                Hidden: ''
+                            });
+                        }
+                        
+                        if(dataBaru.length > 0) {
+                            await supaClient.from('transaksi').insert(dataBaru);
+                            await fetchSemuaData();
+                            alert(`Berhasil merekap ${dataBaru.length} data riwayat peminjaman lama!`);
+                        }
+                        loading.value = false;
+                        e.target.value = ''; // Reset input file
+                    };
+                    reader.readAsText(file);
+                }
                 const hapusSemuaRiwayat = async () => { if(confirm("Hapus semua riwayat transaksi?") && prompt("Pass:") === 'ywka123') { loading.value=true; await supaClient.from('transaksi').delete().neq('ID', '0'); await fetchSemuaData(); } }
 
                 const funcPrint = (htmlBody, title) => { const win = window.open('', '_blank'); win.document.write(`<!DOCTYPE html><html><head><title>${title}</title><style>@media print { @page { margin: 0; } body{margin:0;padding-top:20px;font-family:Arial;} } body{font-family:Arial;} table{width:100%;border-collapse:collapse;margin-top:10px;font-size:11px} th{background:#071a9e;color:white;padding:8px;border:1px solid #000} td{padding:6px;border:1px solid #000}</style></head><body>${htmlBody}<script>setTimeout(()=>window.print(), 500);<\/script></body></html>`); win.document.close(); }
@@ -421,10 +497,10 @@
 
                 const bukaForm = (tipe) => { modalType.value = tipe; showModal.value = true; isEditMode.value = false; if(tipe === 'buku') formBuku.value = { kode: '', judul: '', pengarang: '', penerbit: '', tahun: '', kategori: '', rak: '', stok: 1, Gambar: '', file: null }; if(tipe === 'siswa') formSiswa.value = { nis: '', nama: '', kelas: '', status: 'Aktif', Foto: '', file: null }; if(tipe === 'transaksi') formTransaksi.value = { id: 'TRX-' + Math.floor(Math.random() * 100000), siswa: '', bukuKode: '', lamaPinjam: formPengaturan.value.LamaPinjam }; }
                 const editBuku = (buku) => { modalType.value = 'buku'; isEditMode.value = true; formBuku.value = { kode: buku.KodeBuku, judul: buku.Judul, pengarang: buku.Pengarang, penerbit: buku.Penerbit, tahun: buku.Tahun, kategori: buku.Kategori, rak: buku.Rak, stok: parseInt(buku.Stok) || 0, Gambar: buku.Gambar, file: null }; showModal.value = true; }
-                const editSiswa = (siswa) => { modalType.value = 'siswa'; isEditMode.value = true; formSiswa.value = { nis: siswa.NIS, nama: siswa.Nama, kelas: siswa.Kelas, status: siswa.Status, Foto: siswa.Foto, file: null }; showModal.value = true; }
+                const editSiswa = (siswa) => { modalType.value = 'siswa'; isEditMode.value = true; formSiswa.value = { nis: siswa.NIS, nama: siswa.Nama, kelas: siswa.Kelas, nohp: siswa.NoHP || '', status: siswa.Status, Foto: siswa.Foto, file: null }; showModal.value = true; }
                 const bukaFormUser = () => { modalType.value = 'user'; showModal.value = true; formUser.value = { email: '', password: '', nama: '', role: 'Petugas' }; }
 
-               return { isLoggedIn, loginData, loginError, loadingLogin, currentUser, prosesLogin, logout, activeMenu, menuTitle, loading, searchQuery, filteredBuku, filteredSiswa, dataTransaksi, filteredTransaksi, filterBulan, daftarBulan, statistik, formPengaturan, dataUsers, showModal, modalType, isEditMode, formBuku, formSiswa, formTransaksi, formUser, changeMenu, isMobile, mobileMenuOpen, filterKategoriBuku, filterRakBuku, daftarKategori, daftarRak, bukaForm, bukaFormUser, editBuku, editSiswa, prosesUploadStorage, prosesFileKop, simpanUser, hapusData, simpanPengaturan, simpanBuku, simpanSiswa, simpanTransaksi, ubahStatus, downloadLaporanTransaksi, downloadLaporanBukuPDF, cetakLabelBuku, cetakKartuSiswa, dataSiswa, dataBuku, hapusSemuaRiwayat, selectedBuku, lihatDetailBuku, }
+               return { isLoggedIn, loginData, loginError, loadingLogin, currentUser, prosesLogin, logout, activeMenu, menuTitle, loading, searchQuery, filteredBuku, filteredSiswa, dataTransaksi, filteredTransaksi, filterBulan, daftarBulan, statistik, formPengaturan, dataUsers, showModal, modalType, isEditMode, formBuku, formSiswa, formTransaksi, formUser, changeMenu, isMobile, mobileMenuOpen, filterKategoriBuku, filterRakBuku, daftarKategori, daftarRak, bukaForm, bukaFormUser, editBuku, editSiswa, prosesUploadStorage, prosesFileKop, simpanUser, hapusData, simpanPengaturan, simpanBuku, simpanSiswa, simpanTransaksi, ubahStatus, downloadLaporanTransaksi, downloadLaporanBukuPDF, cetakLabelBuku, cetakKartuSiswa, dataSiswa, dataBuku, hapusSemuaRiwayat, selectedBuku, lihatDetailBuku, importCSVTransaksi }
             }
         }).mount('#app')
     </script>
