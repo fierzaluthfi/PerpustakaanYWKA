@@ -300,12 +300,29 @@
                 }
 
                 // SIMPAN DATA
-               const simpanPengaturan = async () => { 
-                    loading.value = true; 
-                    await supaClient.from('pengaturan').upsert({ id: 1, ...formPengaturan.value }); 
-                    await fetchSemuaData(); 
-                    alert("Disimpan!"); 
-                }
+              const simpanPengaturan = async () => {
+                loading.value = true;
+                try {
+                const dataSimpan = {
+                 id: 1,
+                LamaPinjam: parseInt(formPengaturan.value.LamaPinjam) || 3,
+                DendaPerHari: parseInt(formPengaturan.value.DendaPerHari) || 5000,
+                KepalaPerpus: formPengaturan.value.KepalaPerpus || '-',
+                NIP: formPengaturan.value.NIP || '-',
+                KopSurat: formPengaturan.value.KopSurat || ''
+                };
+
+        const { error } = await supaClient.from('pengaturan').upsert(dataSimpan);
+        if (error) throw error;
+
+        await fetchSemuaData();
+        alert("Pengaturan berhasil disimpan!");
+    } catch (err) {
+        console.error("Error simpan pengaturan:", err);
+        alert("Gagal menyimpan pengaturan. Cek console.");
+    }
+    loading.value = false;
+}
                 const simpanUser = async () => { loading.value = true; await supaClient.from('users').insert(formUser.value); await fetchSemuaData(); }
                 const hapusData = async (tabel, kolom, id) => { if(confirm("Hapus data ini?")) { loading.value = true; await supaClient.from(tabel).delete().eq(kolom, id); await fetchSemuaData(); } }
                 
