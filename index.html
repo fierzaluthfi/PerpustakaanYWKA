@@ -215,15 +215,17 @@
         </div>
     </div>
 
-    <script>
+<script>
         // ==========================================
-        // GANTI DENGAN PROJECT URL & ANON KEY SUPABASE ANDA
+        // MASUKKAN KEMBALI URL DAN KEY ANDA DI SINI
         // ==========================================
-        const SUPABASE_URL = "https://cruwuiujfqcnmychyzgu.supabase.co/rest/v1/";
-        const SUPABASE_KEY = "sb_publishable_JWSQrGJgtmOCobYeqUBnjw_kYAqiRC4";
-        window.supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        const SUPABASE_URL = "https://cruwuiujfqcnmychyzgu.supabase.co";
+        const SUPABASE_KEY = "MASUKKAN_KEY_PUBLISHABLE_ANDA_DISINI";
+        
+        // Menggunakan nama 'supaClient' agar tidak bentrok dengan library bawaan Supabase
+        const supaClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-        const { createApp, ref, computed, onMounted } = Vue
+        const { createApp, ref, computed, onMounted } = Vue;
         createApp({
             setup() {
                 const isLoggedIn = ref(false); const loginData = ref({ email: '', password: '' }); const loginError = ref(''); const loadingLogin = ref(false); const currentUser = ref({ nama: '', role: '', email: '' });
@@ -254,21 +256,25 @@
                 // PENGAMBILAN DATA DARI SUPABASE
                 const fetchSemuaData = async () => {
                     loading.value = true;
-                    const [resB, resS, resT, resU, resP] = await Promise.all([
-                        supabase.from('buku').select('*'), supabase.from('siswa').select('*'),
-                        supabase.from('transaksi').select('*'), supabase.from('users').select('*'),
-                        supabase.from('pengaturan').select('*').eq('id', 1).single()
-                    ]);
-                    dataBuku.value = resB.data || []; dataSiswa.value = resS.data || []; 
-                    dataTransaksi.value = (resT.data || []).reverse(); dataUsers.value = resU.data || [];
-                    if(resP.data) formPengaturan.value = resP.data;
-                    statistik.value = { totalBuku: dataBuku.value.length, totalSiswa: dataSiswa.value.length, peminjamanAktif: dataTransaksi.value.filter(t => t.StatusTransaksi === 'Meminjam').length };
+                    try {
+                        const [resB, resS, resT, resU, resP] = await Promise.all([
+                            supaClient.from('buku').select('*'), 
+                            supaClient.from('siswa').select('*'),
+                            supaClient.from('transaksi').select('*'), 
+                            supaClient.from('users').select('*'),
+                            supaClient.from('pengaturan').select('*').eq('id', 1).single()
+                        ]);
+                        dataBuku.value = resB.data || []; dataSiswa.value = resS.data || []; 
+                        dataTransaksi.value = (resT.data || []).reverse(); dataUsers.value = resU.data || [];
+                        if(resP.data) formPengaturan.value = resP.data;
+                        statistik.value = { totalBuku: dataBuku.value.length, totalSiswa: dataSiswa.value.length, peminjamanAktif: dataTransaksi.value.filter(t => t.StatusTransaksi === 'Meminjam').length };
+                    } catch (err) { console.error(err); }
                     loading.value = false; showModal.value = false;
                 }
 
                 const prosesLogin = async () => {
                     loadingLogin.value = true; loginError.value = '';
-                    const { data } = await supabase.from('users').select('*').eq('email', loginData.value.email).eq('password', loginData.value.password).single();
+                    const { data, error } = await supaClient.from('users').select('*').eq('email', loginData.value.email).eq('password', loginData.value.password).single();
                     if (data) { currentUser.value = data; isLoggedIn.value = true; await fetchSemuaData(); } 
                     else { loginError.value = "Email / Password Salah!"; }
                     loadingLogin.value = false;
@@ -278,8 +284,8 @@
                 const uploadBerkas = async (file, folder) => {
                     if (!file) return null;
                     const fName = `${folder}/${Date.now()}_${file.name.replace(/[^a-zA-Z0-9.]/g, '')}`;
-                    await supabase.storage.from('berkas').upload(fName, file);
-                    return supabase.storage.from('berkas').getPublicUrl(fName).data.publicUrl;
+                    await supaClient.storage.from('berkas').upload(fName, file);
+                    return supaClient.storage.from('berkas').getPublicUrl(fName).data.publicUrl;
                 }
                 const prosesUploadStorage = (e, target) => { 
                     const file = e.target.files[0]; 
@@ -295,48 +301,47 @@
                 }
 
                 // SIMPAN DATA
-                const simpanPengaturan = async () => { loading.value = true; await supabase.from('pengaturan').update(formPengaturan.value).eq('id', 1); await fetchSemuaData(); alert("Disimpan!"); }
-                const simpanUser = async () => { loading.value = true; await supabase.from('users').insert(formUser.value); await fetchSemuaData(); }
-                const hapusData = async (tabel, kolom, id) => { if(confirm("Hapus data ini?")) { loading.value = true; await supabase.from(tabel).delete().eq(kolom, id); await fetchSemuaData(); } }
+                const simpanPengaturan = async () => { loading.value = true; await supaClient.from('pengaturan').update(formPengaturan.value).eq('id', 1); await fetchSemuaData(); alert("Disimpan!"); }
+                const simpanUser = async () => { loading.value = true; await supaClient.from('users').insert(formUser.value); await fetchSemuaData(); }
+                const hapusData = async (tabel, kolom, id) => { if(confirm("Hapus data ini?")) { loading.value = true; await supaClient.from(tabel).delete().eq(kolom, id); await fetchSemuaData(); } }
                 
                 const simpanBuku = async () => {
                     loading.value = true;
                     if(formBuku.value.file) { formBuku.value.Gambar = await uploadBerkas(formBuku.value.file, 'buku'); }
                     const qrUrl = "https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=" + encodeURIComponent(formBuku.value.kode);
                     const p = { KodeBuku: formBuku.value.kode, Judul: formBuku.value.judul, Pengarang: formBuku.value.pengarang, Penerbit: formBuku.value.penerbit, Tahun: formBuku.value.tahun, Kategori: formBuku.value.kategori, Rak: formBuku.value.rak, Stok: formBuku.value.stok, QRCode: qrUrl, Gambar: formBuku.value.Gambar!=='pending'?formBuku.value.Gambar:'' };
-                    await supabase.from('buku').upsert(p); await fetchSemuaData();
+                    await supaClient.from('buku').upsert(p); await fetchSemuaData();
                 }
                 
                 const simpanSiswa = async () => {
                     loading.value = true;
                     if(formSiswa.value.file) { formSiswa.value.Foto = await uploadBerkas(formSiswa.value.file, 'siswa'); }
-                    await supabase.from('siswa').upsert({ NIS: formSiswa.value.nis, Nama: formSiswa.value.nama, Kelas: formSiswa.value.kelas, Status: formSiswa.value.status, Foto: formSiswa.value.Foto!=='pending'?formSiswa.value.Foto:'' }); 
+                    await supaClient.from('siswa').upsert({ NIS: formSiswa.value.nis, Nama: formSiswa.value.nama, Kelas: formSiswa.value.kelas, Status: formSiswa.value.status, Foto: formSiswa.value.Foto!=='pending'?formSiswa.value.Foto:'' }); 
                     await fetchSemuaData();
                 }
 
                 const simpanTransaksi = async () => {
                     loading.value = true; const bk = dataBuku.value.find(b => b.KodeBuku === formTransaksi.value.bukuKode);
                     if (!bk) { alert("Pilih buku!"); loading.value=false; return; }
-                    await supabase.from('transaksi').insert({ ID: formTransaksi.value.id, Siswa: formTransaksi.value.siswa, Buku: `${bk.Judul} (${bk.KodeBuku})`, TglPinjam: new Date().toLocaleDateString('en-GB'), StatusTransaksi: 'Meminjam', TglKembali: '-', LamaPinjam: formTransaksi.value.lamaPinjam, Denda: 0, Hidden: '' });
-                    await supabase.from('buku').update({ Stok: bk.Stok - 1 }).eq('KodeBuku', bk.KodeBuku); await fetchSemuaData();
+                    await supaClient.from('transaksi').insert({ ID: formTransaksi.value.id, Siswa: formTransaksi.value.siswa, Buku: `${bk.Judul} (${bk.KodeBuku})`, TglPinjam: new Date().toLocaleDateString('en-GB'), StatusTransaksi: 'Meminjam', TglKembali: '-', LamaPinjam: formTransaksi.value.lamaPinjam, Denda: 0, Hidden: '' });
+                    await supaClient.from('buku').update({ Stok: bk.Stok - 1 }).eq('KodeBuku', bk.KodeBuku); await fetchSemuaData();
                 }
 
                 const ubahStatus = async (id, stat) => {
                     loading.value = true; const trx = dataTransaksi.value.find(t => t.ID === id); const bkKode = trx.Buku.match(/\((.*?)\)$/)[1]; const bk = dataBuku.value.find(b => b.KodeBuku === bkKode);
                     if (stat === 'Selesai') {
                         let denda = 0; try { const parts = trx.TglPinjam.split('/'); const selisihHari = Math.floor((new Date().setHours(0,0,0,0) - new Date(parts[2], parts[1]-1, parts[0])) / 86400000); if(selisihHari > trx.LamaPinjam) denda = (selisihHari - trx.LamaPinjam) * formPengaturan.value.DendaPerHari; }catch(e){}
-                        await supabase.from('transaksi').update({ StatusTransaksi: 'Selesai', TglKembali: new Date().toLocaleDateString('en-GB'), Denda: denda }).eq('ID', id);
-                        if(bk) await supabase.from('buku').update({ Stok: bk.Stok + 1 }).eq('KodeBuku', bkKode);
+                        await supaClient.from('transaksi').update({ StatusTransaksi: 'Selesai', TglKembali: new Date().toLocaleDateString('en-GB'), Denda: denda }).eq('ID', id);
+                        if(bk) await supaClient.from('buku').update({ Stok: bk.Stok + 1 }).eq('KodeBuku', bkKode);
                     } else {
-                        await supabase.from('transaksi').update({ StatusTransaksi: 'Meminjam', TglKembali: '-', Denda: 0 }).eq('ID', id);
-                        if(bk) await supabase.from('buku').update({ Stok: bk.Stok - 1 }).eq('KodeBuku', bkKode);
+                        await supaClient.from('transaksi').update({ StatusTransaksi: 'Meminjam', TglKembali: '-', Denda: 0 }).eq('ID', id);
+                        if(bk) await supaClient.from('buku').update({ Stok: bk.Stok - 1 }).eq('KodeBuku', bkKode);
                     }
                     await fetchSemuaData();
                 }
 
-                const hapusSemuaRiwayat = async () => { if(confirm("Hapus semua riwayat transaksi?") && prompt("Pass:") === 'ywka123') { loading.value=true; await supabase.from('transaksi').delete().neq('ID', '0'); await fetchSemuaData(); } }
+                const hapusSemuaRiwayat = async () => { if(confirm("Hapus semua riwayat transaksi?") && prompt("Pass:") === 'ywka123') { loading.value=true; await supaClient.from('transaksi').delete().neq('ID', '0'); await fetchSemuaData(); } }
 
-                // CETAK PDF & KARTU (Sekarang super cepat tanpa server!)
                 const funcPrint = (htmlBody, title) => { const win = window.open('', '_blank'); win.document.write(`<!DOCTYPE html><html><head><title>${title}</title><style>@media print { @page { margin: 0; } body{margin:0;padding-top:20px;font-family:Arial;} } body{font-family:Arial;} table{width:100%;border-collapse:collapse;margin-top:10px;font-size:11px} th{background:#071a9e;color:white;padding:8px;border:1px solid #000} td{padding:6px;border:1px solid #000}</style></head><body>${htmlBody}<script>setTimeout(()=>window.print(), 500);<\/script></body></html>`); win.document.close(); }
                 const getKop = () => formPengaturan.value.KopSurat ? `<img src="${formPengaturan.value.KopSurat}" style="width:100%;display:block;margin:0;">` : `<h2 style="text-align:center">SMA YWKA BANDUNG</h2><hr style="border:1px solid #000">`;
                 const getTTD = () => `<div style="width:300px;float:right;text-align:center;margin-top:30px;font-size:11px"><p>Bandung, ${new Date().toLocaleDateString('id-ID')}<br>Kepala Perpustakaan,</p><br><br><br><p style="font-weight:bold;text-decoration:underline;margin-bottom:2px">${formPengaturan.value.KepalaPerpus}</p><p style="margin-top:0">NIP/NIK. ${formPengaturan.value.NIP}</p></div>`;
