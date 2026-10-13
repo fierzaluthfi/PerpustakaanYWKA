@@ -273,7 +273,7 @@
 
                 const prosesLogin = async () => {
                     loadingLogin.value = true; loginError.value = '';
-                    const { data, error } = await supaClient.from('users').select('*').eq('email', loginData.value.email).eq('password', loginData.value.password).single();
+                    const { data, error } = await supaClient.from('users').select('*').eq('email', loginData.value.email).eq('password', loginData.value.password).maybeSingle();oginData.value.email).eq('password', loginData.value.password).single();
                     if (data) { currentUser.value = data; isLoggedIn.value = true; await fetchSemuaData(); } 
                     else { loginError.value = "Email / Password Salah!"; }
                     loadingLogin.value = false;
