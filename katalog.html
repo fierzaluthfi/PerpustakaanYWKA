@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Katalog e-Perpus - SMA YWKA Bandung</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        .bg-ywka-blue { background-color: #071a9e; }
+        .bg-ywka-green { background-color: #1b8827; }
+        .bg-ywka-orange { background-color: #fd5203; }
+        .text-ywka-orange { color: #fd5203; }
+    </style>
+</head>
+<body class="bg-gray-100 font-sans text-gray-800 min-h-screen flex flex-col">
+    <div id="app" class="flex flex-col flex-1">
+        
+        <!-- HEADER KATALOG -->
+        <header class="bg-ywka-blue text-white shadow-md py-4 px-6 md:px-12 flex flex-col md:flex-row justify-between items-center gap-4 sticky top-0 z-30">
+            <div class="flex items-center gap-3">
+                <img src="logo.png" class="w-12 h-12 rounded-lg bg-white p-1 object-contain shadow" alt="Logo YWKA">
+                <div>
+                    <h1 class="text-xl font-extrabold tracking-wide">Katalog e-Perpus</h1>
+                    <p class="text-xs text-blue-200">SMA YWKA Bandung</p>
+                </div>
+            </div>
+            <!-- Kotak Pencarian -->
+            <div class="relative w-full md:w-96">
+                <input type="text" v-model="searchQuery" placeholder="Cari judul, pengarang, atau ISBN..." class="w-full bg-white text-gray-800 rounded-full py-2 px-4 pl-10 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400 shadow-inner">
+                <i class="fas fa-search absolute left-3.5 top-3 text-gray-400 text-sm"></i>
+            </div>
+        </header>
+
+        <!-- KONTEN UTAMA -->
+        <main class="flex-1 max-w-7xl w-full mx-auto p-4 md:p-8 space-y-6">
+            
+            <!-- FILTER KATEGORI -->
+            <div class="bg-white p-4 rounded-xl shadow-sm flex flex-wrap items-center gap-2 border">
+                <button @click="filterKategori = ''" :class="filterKategori === '' ? 'bg-ywka-orange text-white shadow' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'" class="px-4 py-2 rounded-full text-xs md:text-sm font-bold transition-all">Semua Buku</button>
+                <button v-for="kat in daftarKategori" :key="kat" @click="filterKategori = kat" :class="filterKategori === kat ? 'bg-ywka-orange text-white shadow' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'" class="px-4 py-2 rounded-full text-xs md:text-sm font-bold transition-all">{{ kat }}</button>
+                <div class="ml-auto text-xs md:text-sm text-gray-500 font-semibold">Menampilkan <span class="text-ywka-blue font-bold">{{ filteredBuku.length }}</span> buku</div>
+            </div>
+
+            <!-- LOADING STATE -->
+            <div v-if="loading" class="text-center py-20 text-ywka-orange font-bold text-lg animate-pulse">
+                <i class="fas fa-spinner fa-spin mr-2"></i> Memuat katalog buku...
+            </div>
+
+            <!-- GRID DAFTAR BUKU (SESUAI REFERENSI) -->
+            <div v-else class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 md:gap-6">
+                <div v-for="buku in filteredBuku" :key="buku.KodeBuku" class="bg-white rounded-xl shadow-md overflow-hidden border hover:shadow-xl transition-all flex flex-col group">
+                    
+                    <!-- Cover Buku & Badge Stok -->
+                    <div class="relative h-48 md:h-60 bg-gray-200 overflow-hidden flex items-center justify-center">
+                        <img v-if="buku.Gambar" :src="buku.Gambar" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300">
+                        <div v-else class="text-gray-400 flex flex-col items-center"><i class="fas fa-book text-4xl mb-1"></i><span class="text-xs">Tanpa Cover</span></div>
+                        
+                        <!-- Badge Ketersediaan -->
+                        <div class="absolute top-2 left-2">
+                            <span :class="buku.Stok > 0 ? 'bg-green-600 text-white' : 'bg-red-500 text-white'" class="text-[10px] font-bold px-2.5 py-1 rounded-full shadow flex items-center gap-1">
+                                <i class="fas" :class="buku.Stok > 0 ? 'fa-check-circle' : 'fa-times-circle'"></i> {{ buku.Stok > 0 ? 'Tersedia' : 'Habis' }}
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- Informasi Buku -->
+                    <div class="p-3 md:p-4 flex flex-col flex-grow justify-between space-y-2">
+                        <div>
+                            <span class="text-[10px] uppercase tracking-wider font-extrabold text-blue-800 bg-blue-100 px-2 py-0.5 rounded">{{ buku.Kategori }}</span>
+                            <h3 class="font-bold text-xs md:text-sm text-gray-800 line-clamp-2 mt-1 leading-snug" :title="buku.Judul">{{ buku.Judul }}</h3>
+                            <p class="text-[11px] text-gray-500 truncate mt-1"><i class="fas fa-pen-nib mr-1"></i>{{ buku.Pengarang }}</p>
+                        </div>
+                        <div class="border-t pt-2 flex justify-between items-center text-xs">
+                            <span class="text-gray-600 font-mono"><i class="fas fa-map-marker-alt text-ywka-orange mr-1"></i>Rak: <b>{{ buku.Rak }}</b></span>
+                            <span class="font-bold text-ywka-green">{{ buku.Stok }} Pcs</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- JIKA KOSONG -->
+            <div v-if="!loading && filteredBuku.length === 0" class="text-center py-20 bg-white rounded-xl shadow border p-8">
+                <i class="fas fa-search text-4xl text-gray-300 mb-3"></i>
+                <p class="text-gray-500 font-semibold">Buku yang Anda cari tidak ditemukan.</p>
+            </div>
+        </main>
+
+        <!-- FOOTER -->
+        <footer class="bg-white border-t text-center py-4 text-xs text-gray-500 mt-auto">
+            © 2026 Perpustakaan Digital SMA YWKA Bandung • All Rights Reserved
+        </footer>
+    </div>
+
+    <script>
+        const SUPABASE_URL = "https://cruwuiujfqcnmychyzgu.supabase.co";
+        const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNydXd1aXVqZnFjbm15Y2h5emd1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTE3NzExMzksImV4cCI6MjEwNzM0NzEzOX0.6qnyfEwtrf91xQCteBaofJ_H5FKsZ9Moh4Le2s9VhZs";
+        const supaClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        const { createApp, ref, computed, onMounted } = Vue;
+        createApp({
+            setup() {
+                const dataBuku = ref([]);
+                const loading = ref(true);
+                const searchQuery = ref('');
+                const filterKategori = ref('');
+
+                const fetchBukuKatalog = async () => {
+                    loading.value = true;
+                    const { data, error } = await supaClient.from('buku').select('*');
+                    if (data) dataBuku.value = data;
+                    loading.value = false;
+                }
+
+                onMounted(() => {
+                    fetchBukuKatalog();
+                });
+
+                const daftarKategori = computed(() => {
+                    const k = new Set();
+                    dataBuku.value.forEach(b => { if(b.Kategori) k.add(b.Kategori); });
+                    return Array.from(k).sort();
+                });
+
+                const filteredBuku = computed(() => {
+                    return dataBuku.value.filter(b => {
+                        const matchKat = !filterKategori.value || b.Kategori === filterKategori.value;
+                        const matchQuery = !searchQuery.value || 
+                            b.Judul.toLowerCase().includes(searchQuery.value.toLowerCase()) || 
+                            b.Pengarang.toLowerCase().includes(searchQuery.value.toLowerCase()) || 
+                            b.KodeBuku.toLowerCase().includes(searchQuery.value.toLowerCase());
+                        return matchKat && matchQuery;
+                    });
+                });
+
+                return { dataBuku, loading, searchQuery, filterKategori, daftarKategori, filteredBuku };
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>
