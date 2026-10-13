@@ -423,15 +423,48 @@
                     await supaClient.from('buku').update({ Stok: bk.Stok - 1 }).eq('KodeBuku', bk.KodeBuku); await fetchSemuaData();
                 }
 
-                const ubahStatus = async (id, stat) => {
-                    loading.value = true; const trx = dataTransaksi.value.find(t => t.ID === id); const bkKode = trx.Buku.match(/\((.*?)\)$/)[1]; const bk = dataBuku.value.find(b => b.KodeBuku === bkKode);
-                    if (stat === 'Selesai') {
-                        let denda = 0; try { const parts = trx.TglPinjam.split('/'); const selisihHari = Math.floor((new Date().setHours(0,0,0,0) - new Date(parts[2], parts[1]-1, parts[0])) / 86400000); if(selisihHari > trx.LamaPinjam) denda = (selisihHari - trx.LamaPinjam) * formPengaturan.value.DendaPerHari; }catch(e){}
-                        await supaClient.from('transaksi').update({ StatusTransaksi: 'Selesai', TglKembali: new Date().toLocaleDateString('en-GB'), Denda: denda }).eq('ID', id);
-                        if(bk) await supaClient.from('buku').update({ Stok: bk.Stok + 1 }).eq('KodeBuku', bkKode);
-                    } else {
-                        await supaClient.from('transaksi').update({ StatusTransaksi: 'Meminjam', TglKembali: '-', Denda: 0 }).eq('ID', id);
-                        if(bk) await supaClient.from('buku').update({ Stok: bk.Stok - 1 }).eq('KodeBuku', bkKode);
+               const ubahStatus = async (id, stat) => {
+                    loading.value = true; 
+                    try {
+                        const trx = dataTransaksi.value.find(t => t.ID === id); 
+                        
+                        // 1. Ekstrak kode buku super aman (kebal spasi berlebih)
+                        let bkKode = '';
+                        const match = trx.Buku.match(/\(([^)]+)\)/g);
+                        if(match) {
+                            bkKode = match[match.length - 1].replace(/[()]/g, '').trim();
+                        }
+                        const bk = dataBuku.value.find(b => b.KodeBuku === bkKode);
+
+                        if (stat === 'Selesai') {
+                            let denda = 0; 
+                            try { 
+                                // 2. Hitung denda lebih aman
+                                let tglStr = trx.TglPinjam.replace(/-/g, '/');
+                                const parts = tglStr.split('/'); 
+                                if(parts.length === 3) {
+                                    const selisihHari = Math.floor((new Date().setHours(0,0,0,0) - new Date(parts[2], parts[1]-1, parts[0])) / 86400000); 
+                                    const lama = trx.LamaPinjam || formPengaturan.value.LamaPinjam || 3;
+                                    if(selisihHari > lama) denda = (selisihHari - lama) * (formPengaturan.value.DendaPerHari || 5000); 
+                                }
+                            } catch(e) { console.log("Gagal hitung denda:", e); }
+                            
+                            const tglKembali = new Date().toLocaleDateString('en-GB');
+                            
+                            // 3. Update ke Supabase dengan pelacakan Error
+                            const { error } = await supaClient.from('transaksi').update({ StatusTransaksi: 'Selesai', TglKembali: tglKembali, Denda: denda }).eq('ID', id);
+                            if (error) throw error;
+                            
+                            if(bk) await supaClient.from('buku').update({ Stok: bk.Stok + 1 }).eq('KodeBuku', bkKode);
+                        } else {
+                            const { error } = await supaClient.from('transaksi').update({ StatusTransaksi: 'Meminjam', TglKembali: '-', Denda: 0 }).eq('ID', id);
+                            if (error) throw error;
+                            
+                            if(bk) await supaClient.from('buku').update({ Stok: bk.Stok - 1 }).eq('KodeBuku', bkKode);
+                        }
+                    } catch (err) {
+                        console.error("Error ubah status:", err);
+                        alert("Gagal menyimpan! Buka F12 -> Console untuk melihat detail error, atau cek nama kolom di tabel transaksi Supabase.");
                     }
                     await fetchSemuaData();
                 }
