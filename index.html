@@ -310,11 +310,12 @@
         const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNydXd1aXVqZnFjbm15Y2h5emd1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTE3NzExMzksImV4cCI6MjEwNzM0NzEzOX0.6qnyfEwtrf91xQCteBaofJ_H5FKsZ9Moh4Le2s9VhZs";
         const supaClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-        const { createApp, ref, computed } = Vue;
+        const { createApp, ref, computed, onMounted, onUnmounted } = Vue;
         
         createApp({
             setup() {
                 const isLoggedIn = ref(false); const loginData = ref({ email: '', password: '' }); const loginError = ref(''); const loadingLogin = ref(false); const currentUser = ref({ nama: '', role: '', email: '' });
+                let idleTimer = null; // Variabel untuk mendeteksi AFK / Inactivity
                 const activeMenu = ref('dashboard'); const loading = ref(false); const searchQuery = ref(''); const mobileMenuOpen = ref(false);
                 const isMobile = computed(() => window.innerWidth < 768);
 
@@ -340,16 +341,46 @@
 
                 const menuTitle = computed(() => activeMenu.value === 'dashboard' ? 'Dashboard' : activeMenu.value === 'databuku' ? 'Data Buku' : activeMenu.value === 'datasiswa' ? 'Data Siswa' : 'Pengaturan');
                 const changeMenu = (menu) => { activeMenu.value = menu; mobileMenuOpen.value = false; }
-                const logout = () => { isLoggedIn.value = false; }
+                // --- AWAL FITUR SESI & AUTO LOGOUT ---
+                const resetIdleTimer = () => {
+                    if (idleTimer) clearTimeout(idleTimer);
+                    if (isLoggedIn.value) {
+                        idleTimer = setTimeout(() => {
+                            alert("Sesi Anda telah habis karena tidak ada aktivitas. Silakan login kembali.");
+                            logout();
+                        }, 15 * 60 * 1000); // Angka 15 berarti 15 Menit. Silakan ganti sesuai kebutuhan!
+                    }
+                };
+
+                const setupActivityListeners = () => {
+                    ['mousemove', 'mousedown', 'keypress', 'touchmove', 'scroll'].forEach(evt => window.addEventListener(evt, resetIdleTimer));
+                };
+
+                onMounted(async () => {
+                    const savedUser = localStorage.getItem('sip_ywka_user');
+                    if (savedUser) {
+                        currentUser.value = JSON.parse(savedUser);
+                        isLoggedIn.value = true;
+                        setupActivityListeners();
+                        resetIdleTimer();
+                        await fetchSemuaData();
+                    }
+                });
+
+                onUnmounted(() => { if (idleTimer) clearTimeout(idleTimer); });
+
+                const logout = () => { 
+                    isLoggedIn.value = false; 
+                    localStorage.removeItem('sip_ywka_user'); // Hapus ingatan saat logout manual
+                    if (idleTimer) clearTimeout(idleTimer);
+                };
 
                 const fetchSemuaData = async () => {
                     loading.value = true;
                     try {
                         const [resB, resS, resT, resU, resP] = await Promise.all([
-                            supaClient.from('buku').select('*'), 
-                            supaClient.from('siswa').select('*'),
-                            supaClient.from('transaksi').select('*'), 
-                            supaClient.from('users').select('*'),
+                            supaClient.from('buku').select('*'), supaClient.from('siswa').select('*'),
+                            supaClient.from('transaksi').select('*'), supaClient.from('users').select('*'),
                             supaClient.from('pengaturan').select('*').eq('id', 1).single()
                         ]);
                         dataBuku.value = resB.data || []; dataSiswa.value = resS.data || []; 
@@ -363,10 +394,19 @@
                 const prosesLogin = async () => {
                     loadingLogin.value = true; loginError.value = '';
                     const { data, error } = await supaClient.from('users').select('*').eq('email', loginData.value.email).eq('password', loginData.value.password).maybeSingle();
-                    if (data) { currentUser.value = data; isLoggedIn.value = true; await fetchSemuaData(); } 
-                    else { loginError.value = "Email / Password Salah!"; }
+                    if (data) { 
+                        currentUser.value = data; 
+                        isLoggedIn.value = true; 
+                        localStorage.setItem('sip_ywka_user', JSON.stringify(data)); // Simpan sesi login ke memori browser
+                        setupActivityListeners();
+                        resetIdleTimer();
+                        await fetchSemuaData(); 
+                    } else { 
+                        loginError.value = "Email / Password Salah!"; 
+                    }
                     loadingLogin.value = false;
                 }
+                // --- AKHIR FITUR SESI & AUTO LOGOUT ---
 
                 const uploadBerkas = async (file, folder) => {
                     if (!file) return null;
