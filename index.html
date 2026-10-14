@@ -673,7 +673,18 @@
                 const editSiswa = (siswa) => { modalType.value = 'siswa'; isEditMode.value = true; formSiswa.value = { nis: siswa.NIS, nama: siswa.Nama, kelas: siswa.Kelas, nohp: siswa.NoHP || '', status: siswa.Status, Foto: siswa.Foto, file: null }; showModal.value = true; }
                 const bukaFormUser = () => { modalType.value = 'user'; showModal.value = true; formUser.value = { email: '', password: '', nama: '', role: 'Petugas' }; }
 
-               return { isLoggedIn, loginData, loginError, loadingLogin, currentUser, prosesLogin, logout, activeMenu, menuTitle, loading, searchQuery, filteredBuku, filteredSiswa, dataTransaksi, filteredTransaksi, filterBulan, daftarBulan, statistik, formPengaturan, dataUsers, showModal, modalType, isEditMode, formBuku, formSiswa, formTransaksi, formUser, changeMenu, isMobile, mobileMenuOpen, filterKategoriBuku, filterRakBuku, daftarKategori, daftarRak, bukaForm, bukaFormUser, editBuku, editSiswa, prosesUploadStorage, prosesFileKop, simpanUser, hapusData, simpanPengaturan, simpanBuku, simpanSiswa, simpanTransaksi, ubahStatus, downloadLaporanTransaksi, downloadLaporanBukuPDF, cetakLabelBuku, cetakKartuSiswa, dataSiswa, dataBuku, hapusSemuaRiwayat, selectedBuku, lihatDetailBuku, importCSVTransaksiselectedBukuIds, selectAllBuku, formBulkRak, bukaBulkEditRak, simpanBulkRak, hapusBukuTerpilih }
+               return { 
+                    isLoggedIn, loginData, loginError, loadingLogin, currentUser, prosesLogin, logout, 
+                    activeMenu, menuTitle, loading, searchQuery, filteredBuku, filteredSiswa, dataTransaksi, 
+                    filteredTransaksi, filterBulan, daftarBulan, statistik, formPengaturan, dataUsers, 
+                    showModal, modalType, isEditMode, formBuku, formSiswa, formTransaksi, formUser, 
+                    changeMenu, isMobile, mobileMenuOpen, filterKategoriBuku, filterRakBuku, daftarKategori, 
+                    daftarRak, bukaForm, bukaFormUser, editBuku, editSiswa, prosesUploadStorage, prosesFileKop, 
+                    simpanUser, hapusData, simpanPengaturan, simpanBuku, simpanSiswa, simpanTransaksi, 
+                    ubahStatus, downloadLaporanTransaksi, downloadLaporanBukuPDF, cetakLabelBuku, cetakKartuSiswa, 
+                    dataSiswa, dataBuku, hapusSemuaRiwayat, selectedBuku, lihatDetailBuku, importCSVTransaksi,
+                    selectedBukuIds, selectAllBuku, formBulkRak, bukaBulkEditRak, simpanBulkRak, hapusBukuTerpilih
+                }
             }
         }).mount('#app')
     </script>
