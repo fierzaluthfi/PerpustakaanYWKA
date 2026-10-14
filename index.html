@@ -416,11 +416,37 @@
                     await fetchSemuaData();
                 }
 
-                const simpanTransaksi = async () => {
-                    loading.value = true; const bk = dataBuku.value.find(b => b.KodeBuku === formTransaksi.value.bukuKode);
-                    if (!bk) { alert("Pilih buku!"); loading.value=false; return; }
-                    await supaClient.from('transaksi').insert({ ID: formTransaksi.value.id, Siswa: formTransaksi.value.siswa, Buku: `${bk.Judul} (${bk.KodeBuku})`, TglPinjam: new Date().toLocaleDateString('en-GB'), StatusTransaksi: 'Meminjam', TglKembali: '-', LamaPinjam: formTransaksi.value.lamaPinjam, Denda: 0, Hidden: '' });
-                    await supaClient.from('buku').update({ Stok: bk.Stok - 1 }).eq('KodeBuku', bk.KodeBuku); await fetchSemuaData();
+               const simpanTransaksi = async () => {
+                    loading.value = true; 
+                    try {
+                        const bk = dataBuku.value.find(b => b.KodeBuku === formTransaksi.value.bukuKode);
+                        if (!bk) { alert("Pilih buku!"); loading.value=false; return; }
+
+                        // 1. Simpan transaksi ke Supabase terlebih dahulu
+                        const { error } = await supaClient.from('transaksi').insert({ 
+                            ID: formTransaksi.value.id, 
+                            Siswa: formTransaksi.value.siswa, 
+                            Buku: `${bk.Judul} (${bk.KodeBuku})`, 
+                            TglPinjam: new Date().toLocaleDateString('en-GB'), 
+                            StatusTransaksi: 'Meminjam', 
+                            TglKembali: '-', 
+                            LamaPinjam: formTransaksi.value.lamaPinjam, 
+                            Denda: 0, 
+                            Hidden: '' 
+                        });
+                        
+                        // Jika gagal simpan transaksi, lemparkan error dan STOP proses
+                        if (error) throw error; 
+
+                        // 2. Jika transaksi sukses, BARU kurangi stok buku
+                        await supaClient.from('buku').update({ Stok: bk.Stok - 1 }).eq('KodeBuku', bk.KodeBuku); 
+                        
+                        alert("Peminjaman berhasil dicatat!");
+                    } catch (err) {
+                        console.error("Error Simpan Transaksi:", err);
+                        alert("Gagal menyimpan transaksi! Cek Console (F12) untuk detail error.");
+                    }
+                    await fetchSemuaData();
                 }
 
                const ubahStatus = async (id, stat) => {
