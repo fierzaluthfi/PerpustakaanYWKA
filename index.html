@@ -93,7 +93,7 @@
 
                         <div class="bg-white rounded-xl shadow overflow-hidden">
                             <div class="px-4 md:px-6 py-4 border-b bg-gray-50 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                                <div class="flex flex-wrap items-center gap-2"><h3 class="font-bold mr-2 text-sm md:text-base">Catatan Peminjaman</h3><select v-model="filterBulan" class="border border-gray-300 rounded px-2 py-1 text-xs md:text-sm"><option value="">Semua Waktu</option><option v-for="b in daftarBulan" :key="b.value" :value="b.value">{{ b.label }}</option></select></div>
+                                <div class="flex flex-wrap items-center gap-2"><h3 class="font-bold mr-2 text-sm md:text-base">Catatan Peminjaman</h3><select v-model="filterBulan" class="border border-gray-300 rounded px-2 py-1 text-xs md:text-sm"><option value="">Semua Waktu Aktif</option><option v-for="b in daftarBulan" :key="b.value" :value="b.value">{{ b.label }}</option><option value="ARSIP" class="font-bold text-ywka-orange">📚 Lihat Arsip Lama</option></select></div>
                                 <div class="flex flex-wrap items-center gap-2 w-full md:w-auto">
                                     <button @click="bukaForm('transaksi')" class="flex-1 bg-ywka-orange text-white px-3 py-1.5 rounded shadow font-bold hover:scale-105"><i class="fas fa-plus-circle mr-1"></i> Baru</button>
                                     
@@ -103,7 +103,7 @@
                                     </label>
                                     
                                     <button @click="downloadLaporanTransaksi" class="flex-1 bg-ywka-green text-white px-3 py-1.5 rounded shadow font-bold"><i class="fas fa-file-pdf mr-1"></i> PDF</button>
-                                    <button @click="hapusSemuaRiwayat" class="flex-1 text-red-600 hover:bg-red-100 px-3 py-1.5 rounded border border-red-200 font-bold"><i class="fas fa-trash-alt mr-1"></i> Clear</button>
+                                    <button @click="hapusSemuaRiwayat" class="flex-1 text-gray-600 hover:bg-gray-200 px-3 py-1.5 rounded border border-gray-300 font-bold" title="Pindahkan semua ke Arsip Lama"><i class="fas fa-archive mr-1"></i> Arsip</button>
                                 </div>
                             </div>
                             <div class="overflow-x-auto">
@@ -328,8 +328,11 @@
                 const formUser = ref({ email: '', password: '', nama: '', role: 'Petugas' });
 
                 const filterBulan = ref(''); const filterKategoriBuku = ref(''); const filterRakBuku = ref('');
-                const daftarBulan = computed(() => { const b = new Set(); dataTransaksi.value.forEach(t => { if (t.TglPinjam && t.TglPinjam !== '-') b.add(t.TglPinjam.substring(3)); }); return Array.from(b).map(v => ({ value: v, label: v })); });
-                const filteredTransaksi = computed(() => dataTransaksi.value.filter(t => !filterBulan.value || t.TglPinjam.includes(filterBulan.value) || t.TglKembali.includes(filterBulan.value)));
+                const daftarBulan = computed(() => { const b = new Set(); dataTransaksi.value.filter(t => t.Hidden !== 'true').forEach(t => { if (t.TglPinjam && t.TglPinjam !== '-') b.add(t.TglPinjam.substring(3)); }); return Array.from(b).map(v => ({ value: v, label: v })); });
+                const filteredTransaksi = computed(() => {
+                    if (filterBulan.value === 'ARSIP') return dataTransaksi.value.filter(t => t.Hidden === 'true');
+                    return dataTransaksi.value.filter(t => t.Hidden !== 'true' && (!filterBulan.value || t.TglPinjam.includes(filterBulan.value) || t.TglKembali.includes(filterBulan.value)));
+                });
                 const daftarKategori = computed(() => { const k = new Set(); dataBuku.value.forEach(b => k.add(b.Kategori)); return Array.from(k).sort(); });
                 const daftarRak = computed(() => { const r = new Set(); dataBuku.value.forEach(b => r.add(b.Rak)); return Array.from(r).sort(); });
                 const filteredBuku = computed(() => dataBuku.value.filter(b => (!filterKategoriBuku.value || b.Kategori === filterKategoriBuku.value) && (!filterRakBuku.value || b.Rak === filterRakBuku.value) && (!searchQuery.value || b.Judul.toLowerCase().includes(searchQuery.value.toLowerCase()) || b.KodeBuku.toLowerCase().includes(searchQuery.value.toLowerCase()))));
@@ -535,7 +538,14 @@
                     reader.readAsText(file);
                 }
 
-                const hapusSemuaRiwayat = async () => { if(confirm("Hapus semua riwayat transaksi?") && prompt("Pass:") === 'ywka123') { loading.value=true; await supaClient.from('transaksi').delete().neq('ID', '0'); await fetchSemuaData(); } }
+                const hapusSemuaRiwayat = async () => { 
+                    if(confirm("Pindahkan semua riwayat transaksi saat ini ke 'Arsip Lama'? (Tampilan Dashboard akan dibersihkan, tapi data tetap utuh)") && prompt("Masukkan Password (ywka123):") === 'ywka123') { 
+                        loading.value = true; 
+                        await supaClient.from('transaksi').update({ Hidden: 'true' }).neq('ID', '0'); 
+                        await fetchSemuaData(); 
+                        alert("Berhasil diarsipkan!");
+                    } 
+                }
 
                 const funcPrint = (htmlBody, title) => { const win = window.open('', '_blank'); win.document.write(`<!DOCTYPE html><html><head><title>${title}</title><style>@media print { @page { margin: 0; } body{margin:0;padding-top:20px;font-family:Arial;} } body{font-family:Arial;} table{width:100%;border-collapse:collapse;margin-top:10px;font-size:11px} th{background:#071a9e;color:white;padding:8px;border:1px solid #000} td{padding:6px;border:1px solid #000}</style></head><body>${htmlBody}<script>setTimeout(()=>window.print(), 500);<\/script></body></html>`); win.document.close(); }
                 const getKop = () => formPengaturan.value.KopSurat ? `<img src="${formPengaturan.value.KopSurat}" style="width:100%;display:block;margin:0;">` : `<h2 style="text-align:center">SMA YWKA BANDUNG</h2><hr style="border:1px solid #000">`;
