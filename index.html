@@ -141,17 +141,38 @@
 
                     <!-- MENU 2: DATABASE BUKU -->
                     <div v-if="activeMenu === 'databuku'" class="bg-white rounded-xl shadow overflow-hidden flex flex-col h-full">
-                        <div class="p-4 bg-gray-50 flex flex-col md:flex-row justify-between border-b gap-4">
-                            <div class="flex gap-2"><select v-model="filterKategoriBuku" class="border border-gray-300 rounded px-2 py-1.5 text-xs"><option value="">Kategori</option><option v-for="kat in daftarKategori" :key="kat" :value="kat">{{ kat }}</option></select><select v-model="filterRakBuku" class="border border-gray-300 rounded px-2 py-1.5 text-xs"><option value="">Rak</option><option v-for="rak in daftarRak" :key="rak" :value="rak">{{ rak }}</option></select></div>
-                            <div class="flex gap-2"><button @click="downloadLaporanBukuPDF" class="bg-ywka-green text-white px-3 py-1.5 text-xs rounded shadow font-bold"><i class="fas fa-file-pdf mr-1"></i> Cetak PDF</button><button @click="bukaForm('buku')" class="bg-ywka-blue text-white px-3 py-1.5 text-xs rounded shadow font-bold"><i class="fas fa-plus mr-1"></i> Tambah Buku</button></div>
+                        <div class="p-4 bg-gray-50 flex flex-col md:flex-row justify-between border-b gap-4 items-center">
+                            <div class="flex gap-2">
+                                <select v-model="filterKategoriBuku" class="border border-gray-300 rounded px-2 py-1.5 text-xs"><option value="">Kategori</option><option v-for="kat in daftarKategori" :key="kat" :value="kat">{{ kat }}</option></select>
+                                <select v-model="filterRakBuku" class="border border-gray-300 rounded px-2 py-1.5 text-xs"><option value="">Rak</option><option v-for="rak in daftarRak" :key="rak" :value="rak">{{ rak }}</option></select>
+                            </div>
+                            
+                            <!-- MENU BULK ACTIONS (Muncul jika ada buku yang dicentang) -->
+                            <div v-if="selectedBukuIds.length > 0" class="flex gap-2 bg-blue-100 p-1.5 rounded border border-blue-300 animate-pulse">
+                                <span class="text-xs font-bold text-blue-800 flex items-center px-2">{{ selectedBukuIds.length }} Dipilih</span>
+                                <button @click="bukaBulkEditRak" class="bg-blue-600 text-white px-3 py-1.5 text-xs rounded shadow font-bold hover:bg-blue-700"><i class="fas fa-edit mr-1"></i> Edit Rak</button>
+                                <button @click="hapusBukuTerpilih" class="bg-red-600 text-white px-3 py-1.5 text-xs rounded shadow font-bold hover:bg-red-700"><i class="fas fa-trash mr-1"></i> Hapus</button>
+                            </div>
+                            <!-- TOMBOL DEFAULT -->
+                            <div v-else class="flex gap-2">
+                                <button @click="downloadLaporanBukuPDF" class="bg-ywka-green text-white px-3 py-1.5 text-xs rounded shadow font-bold"><i class="fas fa-file-pdf mr-1"></i> Cetak PDF</button>
+                                <button @click="bukaForm('buku')" class="bg-ywka-blue text-white px-3 py-1.5 text-xs rounded shadow font-bold"><i class="fas fa-plus mr-1"></i> Tambah Buku</button>
+                            </div>
                         </div>
                         <div class="overflow-x-auto flex-1">
                             <table class="w-full text-left text-xs md:text-sm whitespace-nowrap">
                                 <thead class="bg-gray-100">
-                                    <tr><th class="px-4 py-3 text-center">Cover</th><th class="px-4 py-3">Judul & ID</th><th class="px-4 py-3">Kategori</th><th class="px-4 py-3 text-center">Rak</th><th class="px-4 py-3 text-center">Stok</th><th class="px-4 py-3 text-center">Aksi</th></tr>
+                                    <tr>
+                                        <!-- CHECKBOX PILIH SEMUA -->
+                                        <th class="px-4 py-3 text-center w-10"><input type="checkbox" v-model="selectAllBuku" class="w-4 h-4 cursor-pointer rounded text-blue-600"></th>
+                                        <th class="px-4 py-3 text-center">Cover</th><th class="px-4 py-3">Judul & ID</th><th class="px-4 py-3">Kategori</th><th class="px-4 py-3 text-center">Rak</th><th class="px-4 py-3 text-center">Stok</th><th class="px-4 py-3 text-center">Aksi</th>
+                                    </tr>
                                 </thead>
                                 <tbody>
-                                    <tr v-for="buku in filteredBuku" :key="buku.KodeBuku" class="border-b hover:bg-blue-50">
+                                    <tr v-for="buku in filteredBuku" :key="buku.KodeBuku" class="border-b hover:bg-blue-50" :class="{'bg-blue-50': selectedBukuIds.includes(buku.KodeBuku)}">
+                                        <!-- CHECKBOX PER BUKU -->
+                                        <td class="px-4 py-2 text-center"><input type="checkbox" :value="buku.KodeBuku" v-model="selectedBukuIds" class="w-4 h-4 cursor-pointer rounded text-blue-600"></td>
+                                        
                                         <td class="px-4 py-2 text-center"><img v-if="buku.Gambar" :src="buku.Gambar" class="h-16 w-12 object-cover border mx-auto shadow-sm rounded"><div v-else class="h-16 w-12 bg-gray-200 border mx-auto flex items-center justify-center text-gray-400 rounded"><i class="fas fa-book"></i></div></td>
                                         <td class="px-4 py-2"><p class="font-bold text-ywka-blue text-xs mb-1">{{ buku.KodeBuku }}</p><p class="font-bold text-gray-800">{{ buku.Judul }}</p><p class="text-[10px] text-gray-500">{{ buku.Pengarang }} ({{ buku.Tahun }})</p></td>
                                         <td class="px-4 py-2"><span class="bg-blue-100 text-blue-800 text-[10px] font-semibold px-2 py-0.5 rounded">{{ buku.Kategori }}</span></td>
@@ -164,11 +185,11 @@
                                             <button @click="hapusData('buku', 'KodeBuku', buku.KodeBuku)" class="text-red-500 bg-red-50 p-1.5 rounded"><i class="fas fa-trash"></i></button>
                                         </td>
                                     </tr>
+                                    <tr v-if="filteredBuku.length === 0"><td colspan="7" class="text-center py-8 text-gray-500">Buku catatan kosong.</td></tr>
                                 </tbody>
                             </table>
                         </div>
                     </div>
-
                     <!-- MENU 3: DATABASE SISWA -->
                     <div v-if="activeMenu === 'datasiswa'" class="bg-white rounded-xl shadow overflow-hidden flex flex-col h-full">
                         <div class="p-4 bg-gray-50 flex justify-between border-b"><button @click="bukaForm('siswa')" class="bg-ywka-green text-white px-4 py-2 text-sm rounded shadow font-bold"><i class="fas fa-user-plus mr-2"></i>Daftarkan Siswa</button></div>
@@ -267,7 +288,18 @@
                         <div class="border p-2 bg-gray-50 rounded"><label class="text-xs font-bold block mb-1">Kamera / File Cover</label><input type="file" @change="e => prosesUploadStorage(e, 'buku')" accept="image/*" class="text-xs"><div v-if="formBuku.Gambar" class="mt-2 text-xs text-green-600 font-bold"><i class="fas fa-check"></i> Foto siap</div></div>
                         <button type="submit" class="w-full bg-ywka-blue text-white py-2 rounded font-bold mt-2">Simpan</button>
                     </form>
-
+                    <!-- Modal Bulk Edit Rak (Massal) -->
+                    <form v-if="modalType === 'bulkRak'" @submit.prevent="simpanBulkRak" class="space-y-4 mt-4">
+                        <h3 class="font-bold text-lg mb-4">Edit Rak Massal ({{ selectedBukuIds.length }} Buku)</h3>
+                        <div class="bg-blue-50 border border-blue-200 text-blue-700 px-4 py-3 rounded text-sm mb-4">
+                            Anda akan memindahkan <b>{{ selectedBukuIds.length }} buku terpilih</b> ke lokasi rak yang baru.
+                        </div>
+                        <div>
+                            <label class="text-xs font-bold block mb-1">Nama / Lokasi Rak Baru</label>
+                            <input type="text" v-model="formBulkRak" required class="w-full border rounded p-2 text-lg font-bold text-ywka-blue uppercase" placeholder="Contoh: B12">
+                        </div>
+                        <button type="submit" class="w-full bg-ywka-blue text-white py-2 rounded font-bold mt-4 hover:bg-blue-700 shadow"><i class="fas fa-save mr-2"></i>Simpan Perubahan Rak</button>
+                    </form>
                     <!-- Modal Siswa -->
                     <form v-if="modalType === 'siswa'" @submit.prevent="simpanSiswa" class="space-y-3 mt-4">
                         <h3 class="font-bold text-lg mb-4">{{ isEditMode ? 'Edit Siswa' : 'Tambah Siswa' }}</h3>
@@ -324,6 +356,39 @@
                 const showModal = ref(false); const modalType = ref('buku'); const isEditMode = ref(false); const selectedBuku = ref(null);
                 
                 const formBuku = ref({ kode: '', judul: '', pengarang: '', penerbit: '', tahun: '', kategori: '', rak: '', stok: 1, Gambar: '', file: null }); 
+                // TAMBAHAN UNTUK EDIT MASSAL
+                const selectedBukuIds = ref([]);
+                const formBulkRak = ref('');
+                const selectAllBuku = computed({
+                    get: () => filteredBuku.value.length > 0 && selectedBukuIds.value.length === filteredBuku.value.length,
+                    set: (val) => { selectedBukuIds.value = val ? filteredBuku.value.map(b => b.KodeBuku) : []; }
+                });
+
+                const bukaBulkEditRak = () => { modalType.value = 'bulkRak'; formBulkRak.value = ''; showModal.value = true; }
+                const simpanBulkRak = async () => {
+                    loading.value = true;
+                    try {
+                        const { error } = await supaClient.from('buku').update({ Rak: formBulkRak.value }).in('KodeBuku', selectedBukuIds.value);
+                        if (error) throw error;
+                        await fetchSemuaData();
+                        selectedBukuIds.value = [];
+                        showModal.value = false;
+                        alert("Lokasi Rak berhasil diubah secara massal!");
+                    } catch (e) { alert("Gagal update rak massal."); }
+                    loading.value = false;
+                }
+                const hapusBukuTerpilih = async () => {
+                    if (confirm(`Yakin ingin menghapus secara permanen ${selectedBukuIds.value.length} buku yang dipilih?`)) {
+                        loading.value = true;
+                        try {
+                            const { error } = await supaClient.from('buku').delete().in('KodeBuku', selectedBukuIds.value);
+                            if (error) throw error;
+                            await fetchSemuaData();
+                            selectedBukuIds.value = [];
+                        } catch (e) { alert("Gagal menghapus buku."); }
+                        loading.value = false;
+                    }
+                }
                 const formSiswa = ref({ nis: '', nama: '', kelas: '', nohp: '', status: 'Aktif', Foto: '', file: null }); 
                 const formTransaksi = ref({ id: '', siswa: '', bukuKode: '', lamaPinjam: 3 });
                 const formUser = ref({ email: '', password: '', nama: '', role: 'Petugas' });
@@ -608,7 +673,7 @@
                 const editSiswa = (siswa) => { modalType.value = 'siswa'; isEditMode.value = true; formSiswa.value = { nis: siswa.NIS, nama: siswa.Nama, kelas: siswa.Kelas, nohp: siswa.NoHP || '', status: siswa.Status, Foto: siswa.Foto, file: null }; showModal.value = true; }
                 const bukaFormUser = () => { modalType.value = 'user'; showModal.value = true; formUser.value = { email: '', password: '', nama: '', role: 'Petugas' }; }
 
-               return { isLoggedIn, loginData, loginError, loadingLogin, currentUser, prosesLogin, logout, activeMenu, menuTitle, loading, searchQuery, filteredBuku, filteredSiswa, dataTransaksi, filteredTransaksi, filterBulan, daftarBulan, statistik, formPengaturan, dataUsers, showModal, modalType, isEditMode, formBuku, formSiswa, formTransaksi, formUser, changeMenu, isMobile, mobileMenuOpen, filterKategoriBuku, filterRakBuku, daftarKategori, daftarRak, bukaForm, bukaFormUser, editBuku, editSiswa, prosesUploadStorage, prosesFileKop, simpanUser, hapusData, simpanPengaturan, simpanBuku, simpanSiswa, simpanTransaksi, ubahStatus, downloadLaporanTransaksi, downloadLaporanBukuPDF, cetakLabelBuku, cetakKartuSiswa, dataSiswa, dataBuku, hapusSemuaRiwayat, selectedBuku, lihatDetailBuku, importCSVTransaksi }
+               return { isLoggedIn, loginData, loginError, loadingLogin, currentUser, prosesLogin, logout, activeMenu, menuTitle, loading, searchQuery, filteredBuku, filteredSiswa, dataTransaksi, filteredTransaksi, filterBulan, daftarBulan, statistik, formPengaturan, dataUsers, showModal, modalType, isEditMode, formBuku, formSiswa, formTransaksi, formUser, changeMenu, isMobile, mobileMenuOpen, filterKategoriBuku, filterRakBuku, daftarKategori, daftarRak, bukaForm, bukaFormUser, editBuku, editSiswa, prosesUploadStorage, prosesFileKop, simpanUser, hapusData, simpanPengaturan, simpanBuku, simpanSiswa, simpanTransaksi, ubahStatus, downloadLaporanTransaksi, downloadLaporanBukuPDF, cetakLabelBuku, cetakKartuSiswa, dataSiswa, dataBuku, hapusSemuaRiwayat, selectedBuku, lihatDetailBuku, importCSVTransaksiselectedBukuIds, selectAllBuku, formBulkRak, bukaBulkEditRak, simpanBulkRak, hapusBukuTerpilih }
             }
         }).mount('#app')
     </script>
