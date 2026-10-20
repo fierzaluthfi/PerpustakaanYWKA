@@ -249,12 +249,12 @@
                                 <p class="text-2xl font-black text-indigo-700 mt-1">{{ dataLegacy.length }} <span class="text-xs font-normal text-gray-500">transaksi</span></p>
                             </div>
                             <div class="bg-white p-4 rounded-xl shadow border-l-4 border-green-600">
-                                <p class="text-xs text-gray-500 font-semibold uppercase">Status Selesai / Dikembalikan</p>
-                                <p class="text-2xl font-black text-green-600 mt-1">{{ dataLegacy.filter(t => t.StatusTransaksi === 'Selesai').length }} <span class="text-xs font-normal text-gray-500">transaksi</span></p>
+                                <p class="text-xs text-gray-500 font-semibold uppercase">Sudah Kembali</p>
+                                <p class="text-2xl font-black text-green-600 mt-1">{{ dataLegacy.filter(t => isStatusKembali(t)).length }} <span class="text-xs font-normal text-gray-500">transaksi</span></p>
                             </div>
                             <div class="bg-white p-4 rounded-xl shadow border-l-4 border-orange-500">
-                                <p class="text-xs text-gray-500 font-semibold uppercase">Status Meminjam / Belum Selesai</p>
-                                <p class="text-2xl font-black text-ywka-orange mt-1">{{ dataLegacy.filter(t => t.StatusTransaksi !== 'Selesai').length }} <span class="text-xs font-normal text-gray-500">transaksi</span></p>
+                                <p class="text-xs text-gray-500 font-semibold uppercase">Belum Kembali</p>
+                                <p class="text-2xl font-black text-ywka-orange mt-1">{{ dataLegacy.filter(t => !isStatusKembali(t)).length }} <span class="text-xs font-normal text-gray-500">transaksi</span></p>
                             </div>
                         </div>
 
@@ -264,13 +264,13 @@
                                 <div class="flex flex-wrap items-center gap-2">
                                     <h3 class="font-bold text-sm md:text-base text-gray-800 flex items-center gap-2">
                                         <i class="fas fa-table text-ywka-blue"></i>
-                                        <span>Tabel Arsip Legacy</span>
+                                        <span>Tabel Rekap Peminjaman (Legacy)</span>
                                     </h3>
                                     <span class="text-xs bg-blue-100 text-blue-800 font-bold px-2.5 py-0.5 rounded-full">{{ filteredLegacy.length }} Data Ditampilkan</span>
                                     <select v-model="filterStatusLegacy" class="border border-gray-300 rounded px-2.5 py-1 text-xs">
                                         <option value="">Semua Status</option>
-                                        <option value="Selesai">Selesai</option>
-                                        <option value="Meminjam">Meminjam</option>
+                                        <option value="Sudah Kembali">Sudah Kembali</option>
+                                        <option value="Belum Kembali">Belum Kembali</option>
                                     </select>
                                 </div>
                                 <div class="flex flex-wrap items-center gap-2 w-full md:w-auto">
@@ -289,41 +289,51 @@
                                 <table class="w-full text-left text-xs md:text-sm whitespace-nowrap">
                                     <thead class="bg-gray-100 text-gray-700">
                                         <tr>
-                                            <th class="px-4 py-3 text-center w-12">No</th>
-                                            <th class="px-4 py-3">ID / No Rekap</th>
-                                            <th class="px-4 py-3">Tanggal Pinjam</th>
-                                            <th class="px-4 py-3">Nama Siswa / Peminjam</th>
-                                            <th class="px-4 py-3">Buku yang Dipinjam</th>
-                                            <th class="px-4 py-3">Tanggal Kembali</th>
-                                            <th class="px-4 py-3 text-center">Status</th>
-                                            <th class="px-4 py-3 text-center w-16">Aksi</th>
+                                            <th class="px-3 py-3 text-center w-10">No</th>
+                                            <th class="px-3 py-3">Waktu Pinjam</th>
+                                            <th class="px-3 py-3">Nama Lengkap Peminjam</th>
+                                            <th class="px-3 py-3 text-center">Kelas</th>
+                                            <th class="px-3 py-3">Buku yang Dipinjam</th>
+                                            <th class="px-3 py-3">Waktu Pengembalian</th>
+                                            <th class="px-3 py-3 text-center">Kontak Peminjam</th>
+                                            <th class="px-3 py-3 text-center">Keterangan</th>
+                                            <th class="px-3 py-3 text-center w-14">Aksi</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         <tr v-for="(item, idx) in filteredLegacy" :key="item.ID" class="border-b hover:bg-blue-50/50 transition-colors">
-                                            <td class="px-4 py-3 text-center font-mono text-gray-500">{{ idx + 1 }}</td>
-                                            <td class="px-4 py-3 font-mono text-xs text-gray-600">{{ item.ID }}</td>
-                                            <td class="px-4 py-3 font-semibold text-gray-700">{{ item.TglPinjam || '-' }}</td>
-                                            <td class="px-4 py-3 font-bold text-ywka-blue">{{ item.Siswa || '-' }}</td>
-                                            <td class="px-4 py-3 text-gray-800 font-medium">{{ item.Buku || '-' }}</td>
-                                            <td class="px-4 py-3 font-medium" :class="item.TglKembali && item.TglKembali !== '-' ? 'text-green-700' : 'text-gray-400'">{{ item.TglKembali || '-' }}</td>
-                                            <td class="px-4 py-3 text-center">
-                                                <span :class="item.StatusTransaksi === 'Selesai' ? 'bg-green-100 text-green-700 border-green-200' : 'bg-orange-100 text-orange-700 border-orange-200'" class="border px-2.5 py-0.5 rounded-full text-[11px] font-bold">
-                                                    {{ item.StatusTransaksi || 'Selesai' }}
+                                            <td class="px-3 py-3 text-center font-mono text-gray-500">{{ idx + 1 }}</td>
+                                            <td class="px-3 py-3 font-semibold text-gray-700">{{ item.TglPinjam || '-' }}</td>
+                                            <td class="px-3 py-3 font-bold text-ywka-blue">{{ getNamaSiswa(item) }}</td>
+                                            <td class="px-3 py-3 text-center font-semibold text-gray-700">
+                                                <span class="bg-gray-100 text-gray-800 px-2 py-0.5 rounded text-xs border">{{ getKelas(item) }}</span>
+                                            </td>
+                                            <td class="px-3 py-3 text-gray-800 font-medium max-w-xs truncate" :title="item.Buku">{{ item.Buku || '-' }}</td>
+                                            <td class="px-3 py-3 font-medium" :class="item.TglKembali && item.TglKembali !== '-' ? 'text-green-700' : 'text-gray-400'">{{ item.TglKembali || '-' }}</td>
+                                            <td class="px-3 py-3 text-center font-mono text-xs">
+                                                <a v-if="getKontak(item) !== '-'" :href="'https://wa.me/' + getKontak(item).replace(/[^0-9]/g, '')" target="_blank" class="text-green-600 hover:text-green-800 font-bold inline-flex items-center gap-1 hover:underline">
+                                                    <i class="fab fa-whatsapp"></i> {{ getKontak(item) }}
+                                                </a>
+                                                <span v-else class="text-gray-400">-</span>
+                                            </td>
+                                            <td class="px-3 py-3 text-center">
+                                                <span :class="isStatusKembali(item) ? 'bg-green-100 text-green-700 border-green-200' : 'bg-orange-100 text-orange-700 border-orange-200'" class="border px-2.5 py-1 rounded-full text-[11px] font-bold inline-flex items-center gap-1">
+                                                    <i class="fas" :class="isStatusKembali(item) ? 'fa-check-circle' : 'fa-clock'"></i>
+                                                    {{ isStatusKembali(item) ? 'Sudah Kembali' : 'Belum Kembali' }}
                                                 </span>
                                             </td>
-                                            <td class="px-4 py-3 text-center">
+                                            <td class="px-3 py-3 text-center">
                                                 <button @click="hapusData('transaksi', 'ID', item.ID)" class="text-red-500 hover:text-red-700 hover:bg-red-50 p-1.5 rounded transition-colors" title="Hapus baris ini">
                                                     <i class="fas fa-trash"></i>
                                                 </button>
                                             </td>
                                         </tr>
                                         <tr v-if="filteredLegacy.length === 0">
-                                            <td colspan="8" class="text-center py-12 text-gray-500">
+                                            <td colspan="9" class="text-center py-12 text-gray-500">
                                                 <div class="flex flex-col items-center justify-center space-y-2">
                                                     <i class="fas fa-folder-open text-4xl text-gray-300"></i>
                                                     <p class="font-semibold text-gray-600">Belum ada data legacy / rekapan lama.</p>
-                                                    <p class="text-xs text-gray-400 max-w-sm">Klik tombol "Upload Rekap Excel" di atas untuk mengunggah file rekapan Excel lama Anda (.xlsx, .xls, .csv).</p>
+                                                    <p class="text-xs text-gray-400 max-w-sm">Klik tombol "Upload Rekap Excel" di atas untuk mengunggah file Excel rekap peminjaman perpustakaan Anda.</p>
                                                 </div>
                                             </td>
                                         </tr>
@@ -552,20 +562,30 @@
                                 <table class="w-full text-left text-xs whitespace-nowrap">
                                     <thead class="bg-gray-100 text-gray-700 font-semibold">
                                         <tr>
-                                            <th class="p-2">Pinjam</th>
-                                            <th class="p-2">Siswa / Peminjam</th>
-                                            <th class="p-2">Buku</th>
-                                            <th class="p-2">Kembali</th>
-                                            <th class="p-2">Status</th>
+                                            <th class="p-2 text-center">No</th>
+                                            <th class="p-2">Waktu Pinjam</th>
+                                            <th class="p-2">Nama Peminjam</th>
+                                            <th class="p-2 text-center">Kelas</th>
+                                            <th class="p-2">Buku yang Dipinjam</th>
+                                            <th class="p-2">Waktu Pengembalian</th>
+                                            <th class="p-2 text-center">Kontak</th>
+                                            <th class="p-2 text-center">Keterangan</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         <tr v-for="(p, i) in previewLegacyData.slice(0, 5)" :key="i" class="border-b">
+                                            <td class="p-2 text-center font-mono text-gray-500">{{ i + 1 }}</td>
                                             <td class="p-2 font-mono">{{ p.TglPinjam }}</td>
-                                            <td class="p-2 font-semibold text-ywka-blue">{{ p.Siswa }}</td>
-                                            <td class="p-2 text-gray-800">{{ p.Buku }}</td>
+                                            <td class="p-2 font-semibold text-ywka-blue">{{ getNamaSiswa(p) }}</td>
+                                            <td class="p-2 text-center font-semibold"><span class="bg-gray-100 px-1.5 py-0.5 rounded text-[11px] border">{{ getKelas(p) }}</span></td>
+                                            <td class="p-2 text-gray-800 truncate max-w-[150px]">{{ p.Buku }}</td>
                                             <td class="p-2 font-mono">{{ p.TglKembali }}</td>
-                                            <td class="p-2"><span class="bg-gray-100 px-2 py-0.5 rounded text-[10px] font-bold">{{ p.StatusTransaksi }}</span></td>
+                                            <td class="p-2 text-center font-mono text-[11px]">{{ getKontak(p) }}</td>
+                                            <td class="p-2 text-center">
+                                                <span :class="isStatusKembali(p) ? 'bg-green-100 text-green-700 border-green-200' : 'bg-orange-100 text-orange-700 border-orange-200'" class="border px-2 py-0.5 rounded text-[10px] font-bold">
+                                                    {{ isStatusKembali(p) ? 'Sudah Kembali' : 'Belum Kembali' }}
+                                                </span>
+                                            </td>
                                         </tr>
                                     </tbody>
                                 </table>
@@ -676,6 +696,40 @@
 
                 const formUser = ref({ email: '', password: '', nama: '', role: 'Petugas' });
 
+                // HELPER PARSING SISWA & STATUS LEGACY (SESUAI EXCEL REKAP PEMINJAMAN)
+                const getNamaSiswa = (item) => {
+                    if (!item) return '-';
+                    if (item.NamaPeminjam) return item.NamaPeminjam;
+                    if (item.namapeminjam) return item.namapeminjam;
+                    return String(item.Siswa || '-').replace(/\s*\([^)]*\)$/, '');
+                };
+
+                const getKelas = (item) => {
+                    if (!item) return '-';
+                    if (item.Kelas) return item.Kelas;
+                    if (item.kelas) return item.kelas;
+                    const match = String(item.Siswa || '').match(/\(([^)]+)\)$/);
+                    return match ? match[1] : '-';
+                };
+
+                const getKontak = (item) => {
+                    if (!item) return '-';
+                    if (item.Kontak) return item.Kontak;
+                    if (item.kontak) return item.kontak;
+                    if (item.NoHP) return item.NoHP;
+                    if (item.nohp) return item.nohp;
+                    return '-';
+                };
+
+                const isStatusKembali = (t) => {
+                    if (!t) return false;
+                    const stat = String(t.StatusTransaksi || t.statustransaksi || t.Keterangan || t.keterangan || '').toLowerCase();
+                    if (stat.includes('belum') || stat.includes('meminjam')) return false;
+                    if (stat.includes('sudah') || stat.includes('selesai') || stat.includes('kembali')) return true;
+                    const kembali = t.TglKembali || t.tglkembali || '';
+                    return Boolean(kembali && kembali !== '-');
+                };
+
                 // STATE & COMPUTED DATA LEGACY (REKAP EXCEL)
                 const filterStatusLegacy = ref('');
                 const previewLegacyData = ref([]);
@@ -687,12 +741,21 @@
 
                 const filteredLegacy = computed(() => {
                     return dataLegacy.value.filter(item => {
-                        const matchStatus = !filterStatusLegacy.value || item.StatusTransaksi === filterStatusLegacy.value;
-                        const q = searchQuery.value ? searchQuery.value.toLowerCase() : '';
+                        let matchStatus = true;
+                        if (filterStatusLegacy.value === 'Sudah Kembali') {
+                            matchStatus = isStatusKembali(item);
+                        } else if (filterStatusLegacy.value === 'Belum Kembali') {
+                            matchStatus = !isStatusKembali(item);
+                        }
+                        const q = searchQuery.value ? searchQuery.value.toLowerCase().trim() : '';
                         const matchQuery = !q || 
                             (item.Siswa && item.Siswa.toLowerCase().includes(q)) ||
+                            (item.NamaPeminjam && item.NamaPeminjam.toLowerCase().includes(q)) ||
+                            (item.Kelas && item.Kelas.toLowerCase().includes(q)) ||
                             (item.Buku && item.Buku.toLowerCase().includes(q)) ||
                             (item.TglPinjam && item.TglPinjam.toLowerCase().includes(q)) ||
+                            (item.TglKembali && item.TglKembali.toLowerCase().includes(q)) ||
+                            (item.Kontak && item.Kontak.toLowerCase().includes(q)) ||
                             (item.ID && String(item.ID).toLowerCase().includes(q));
                         return matchStatus && matchQuery;
                     });
@@ -1072,58 +1135,85 @@
                                 return;
                             }
 
-                            // Cari baris header otomatis
+                            // Cari baris header tabel otomatis (biasanya baris ke-4 / index 3 pada format SMA YWKA)
                             let headerIdx = -1;
-                            for (let i = 0; i < Math.min(rows.length, 10); i++) {
-                                const rowStr = rows[i].map(c => String(c).toLowerCase()).join(' ');
-                                if (rowStr.includes('nama') || rowStr.includes('siswa') || rowStr.includes('judul') || rowStr.includes('buku') || rowStr.includes('pinjam')) {
+                            for (let i = 0; i < Math.min(rows.length, 15); i++) {
+                                const row = rows[i] || [];
+                                const rowStr = row.map(c => String(c).toLowerCase()).join(' ');
+                                if ((rowStr.includes('nama') || rowStr.includes('peminjam')) && 
+                                    (rowStr.includes('kelas') || rowStr.includes('buku') || rowStr.includes('kontak') || rowStr.includes('tanggal') || rowStr.includes('waktu'))) {
                                     headerIdx = i;
                                     break;
                                 }
                             }
 
-                            if (headerIdx === -1) headerIdx = 0;
-                            const headers = rows[headerIdx].map(h => String(h).trim().toLowerCase());
+                            if (headerIdx === -1) headerIdx = 3;
+                            const headers = (rows[headerIdx] || []).map(h => String(h).trim().toLowerCase());
 
-                            // Deteksi indeks kolom
-                            let colSiswa = headers.findIndex(h => /siswa|nama|peminjam/i.test(h));
-                            let colKelas = headers.findIndex(h => /kelas|tingkat|rombel/i.test(h));
-                            let colBuku = headers.findIndex(h => /buku|judul|pustaka|koleksi/i.test(h));
-                            let colTglPinjam = headers.findIndex(h => /tgl.*pinjam|tanggal.*pinjam|pinjam/i.test(h));
-                            let colTglKembali = headers.findIndex(h => /tgl.*kembali|tanggal.*kembali|kembali/i.test(h));
-                            let colStatus = headers.findIndex(h => /status|keterangan|ket/i.test(h));
+                            // Deteksi indeks kolom berdasarkan nama header di file Excel
+                            let colTgl = headers.findIndex(h => /^tanggal$|^tgl$/i.test(h));
+                            let colNama = headers.findIndex(h => /nama.*lengkap.*peminjam|nama.*peminjam|nama.*lengkap|nama.*siswa|^nama$/i.test(h));
+                            let colKelas = headers.findIndex(h => /^kelas$|tingkat|rombel/i.test(h));
+                            let colBuku = headers.findIndex(h => /buku.*yang.*dipinjam|judul.*buku|^buku$|^judul$/i.test(h));
+                            let colWaktuPinjam = headers.findIndex(h => /waktu.*peminjaman|tgl.*pinjam|tanggal.*pinjam/i.test(h));
+                            let colWaktuKembali = headers.findIndex(h => /waktu.*pengembalian|tgl.*kembali|tanggal.*kembali/i.test(h));
+                            let colKontak = headers.findIndex(h => /kontak.*peminjam|kontak|no.*hp|nohp|telepon|hp/i.test(h));
+                            let colKeterangan = headers.findIndex(h => /keterangan|status|ket/i.test(h));
 
-                            // Fallback jika tidak terdeteksi via nama kolom
-                            if (colSiswa === -1) colSiswa = 0;
-                            if (colBuku === -1) colBuku = 1;
-                            if (colTglPinjam === -1) colTglPinjam = 2;
-                            if (colTglKembali === -1) colTglKembali = 3;
+                            // Fallback jika header tidak terdeteksi (sesuai urutan kolom A-I pada template SMA YWKA)
+                            if (colTgl === -1) colTgl = 1;                 // Kolom B: Tanggal
+                            if (colNama === -1) colNama = 2;               // Kolom C: Nama Lengkap Peminjam
+                            if (colKelas === -1) colKelas = 3;             // Kolom D: Kelas
+                            if (colBuku === -1) colBuku = 4;               // Kolom E: Buku yang dipinjam
+                            if (colWaktuPinjam === -1) colWaktuPinjam = 5; // Kolom F: Waktu Peminjaman
+                            if (colWaktuKembali === -1) colWaktuKembali = 6;// Kolom G: Waktu Pengembalian
+                            if (colKontak === -1) colKontak = 7;           // Kolom H: Kontak Peminjam
+                            if (colKeterangan === -1) colKeterangan = 8;   // Kolom I: Keterangan
 
                             const parsedData = [];
                             for (let i = headerIdx + 1; i < rows.length; i++) {
                                 const r = rows[i];
                                 if (!r || r.every(c => !String(c).trim())) continue;
 
-                                let siswaVal = r[colSiswa] ? String(r[colSiswa]).trim() : '';
-                                if (!siswaVal) continue;
+                                let namaVal = colNama !== -1 && r[colNama] ? String(r[colNama]).trim() : '';
+                                if (!namaVal || namaVal.toLowerCase() === 'nama' || namaVal.toLowerCase().includes('daftar peminjaman')) continue;
 
-                                if (colKelas !== -1 && r[colKelas] && String(r[colKelas]).trim()) {
-                                    siswaVal += ` (${String(r[colKelas]).trim()})`;
+                                let kelasVal = colKelas !== -1 && r[colKelas] ? String(r[colKelas]).trim() : '';
+                                let bukuVal = colBuku !== -1 && r[colBuku] ? String(r[colBuku]).trim() : 'Buku Perpustakaan';
+
+                                // Tanggal Pinjam: Utamakan Waktu Peminjaman jika terisi, fallback ke Tanggal
+                                let rawPinjam = (colWaktuPinjam !== -1 && r[colWaktuPinjam]) ? r[colWaktuPinjam] : (colTgl !== -1 ? r[colTgl] : '');
+                                let tglPinjamVal = formatExcelDate(rawPinjam);
+                                if (!tglPinjamVal || tglPinjamVal === '-') {
+                                    tglPinjamVal = colTgl !== -1 && r[colTgl] ? formatExcelDate(r[colTgl]) : '-';
                                 }
 
-                                let bukuVal = colBuku !== -1 && r[colBuku] ? String(r[colBuku]).trim() : 'Buku Perpustakaan';
-                                let tglPinjamVal = colTglPinjam !== -1 ? formatExcelDate(r[colTglPinjam]) : '-';
-                                let tglKembaliVal = colTglKembali !== -1 ? formatExcelDate(r[colTglKembali]) : '-';
-                                let statusVal = colStatus !== -1 && r[colStatus] ? String(r[colStatus]).trim() : 'Selesai';
-                                if (!statusVal || statusVal === '-') statusVal = 'Selesai';
+                                let tglKembaliVal = (colWaktuKembali !== -1 && r[colWaktuKembali]) ? formatExcelDate(r[colWaktuKembali]) : '-';
+                                let kontakVal = (colKontak !== -1 && r[colKontak]) ? String(r[colKontak]).trim() : '-';
+
+                                let rawKet = (colKeterangan !== -1 && r[colKeterangan]) ? String(r[colKeterangan]).trim() : '';
+                                let statusVal = 'Sudah Kembali';
+                                if (/belum|pinjam|tidak/i.test(rawKet)) {
+                                    statusVal = 'Belum Kembali';
+                                } else if (/sudah|kembali|selesai/i.test(rawKet)) {
+                                    statusVal = 'Sudah Kembali';
+                                } else if (tglKembaliVal && tglKembaliVal !== '-') {
+                                    statusVal = 'Sudah Kembali';
+                                } else {
+                                    statusVal = 'Belum Kembali';
+                                }
 
                                 parsedData.push({
-                                    ID: 'LEGACY-' + Math.floor(100000 + Math.random() * 900000) + '-' + (i - headerIdx),
-                                    Siswa: siswaVal,
+                                    ID: 'LEGACY-' + Date.now().toString().slice(-6) + '-' + (i - headerIdx),
+                                    Siswa: kelasVal ? `${namaVal} (${kelasVal})` : namaVal,
+                                    NamaPeminjam: namaVal,
+                                    Kelas: kelasVal,
                                     Buku: bukuVal,
                                     TglPinjam: tglPinjamVal,
                                     TglKembali: tglKembaliVal,
+                                    Kontak: kontakVal,
                                     StatusTransaksi: statusVal,
+                                    Keterangan: rawKet || statusVal,
                                     LamaPinjam: 3,
                                     Denda: 0,
                                     Hidden: 'legacy'
@@ -1157,11 +1247,27 @@
                         for (let i = 0; i < total; i += batchSize) {
                             const batch = previewLegacyData.value.slice(i, i + batchSize);
                             let { error } = await supaClient.from('transaksi').insert(batch);
-                            // Fallback jika kolom Hidden belum ada di Supabase
-                            if (error && error.message && error.message.toLowerCase().includes('hidden')) {
-                                const batchFallback = batch.map(({ Hidden, ...rest }) => rest);
-                                const resFallback = await supaClient.from('transaksi').insert(batchFallback);
+                            // Fallback jika kolom baru di tabel transaksi belum ditambahkan di Supabase
+                            if (error) {
+                                console.warn("Fallback insert legacy ke kolom standar:", error.message);
+                                const fallbackBatch = batch.map(b => ({
+                                    ID: b.ID,
+                                    Siswa: b.Siswa,
+                                    Buku: b.Buku,
+                                    TglPinjam: b.TglPinjam,
+                                    TglKembali: b.TglKembali,
+                                    StatusTransaksi: b.StatusTransaksi,
+                                    LamaPinjam: b.LamaPinjam,
+                                    Denda: b.Denda,
+                                    Hidden: 'legacy'
+                                }));
+                                const resFallback = await supaClient.from('transaksi').insert(fallbackBatch);
                                 error = resFallback.error;
+                                if (error && error.message && error.message.toLowerCase().includes('hidden')) {
+                                    const batchNoHidden = fallbackBatch.map(({ Hidden, ...rest }) => rest);
+                                    const resNoHidden = await supaClient.from('transaksi').insert(batchNoHidden);
+                                    error = resNoHidden.error;
+                                }
                             }
                             if (error) throw error;
                         }
@@ -1182,17 +1288,20 @@
                         return;
                     }
                     const contohData = [
-                        ["DAFTAR PEMINJAMAN BUKU PERPUSTAKAAN (LEGACY)"],
+                        ["DAFTAR PEMINJAMAN BUKU PERPUSTAKAAN"],
+                        ["SMA YWKA BANDUNG"],
                         [],
-                        ["No", "Nama Siswa", "Kelas", "Judul Buku", "Tanggal Pinjam", "Tanggal Kembali", "Status"],
-                        [1, "Ahmad Fauzi", "X IPA 1", "Laskar Pelangi", "10/01/2024", "15/01/2024", "Selesai"],
-                        [2, "Siti Rahmawati", "XI IPS 2", "Bumi Manusia", "12/01/2024", "17/01/2024", "Selesai"],
-                        [3, "Budi Santoso", "XII IPA 3", "Fisika Dasar SMA", "15/01/2024", "-", "Meminjam"]
+                        ["No", "Tanggal", "Nama Lengkap Peminjam", "Kelas", "Buku yang dipinjam", "Waktu Peminjaman", "Waktu Pengembalian", "Kontak Peminjam", "Keterangan"],
+                        [1, "30/7/2025", "Novia", "X 1", "Bahasa Inggris (Bahasa Jepang) R.A Kartini", "Rabu, 30 Juli 2025", "Senin / 31/08/2025", "083826570314", "☑ Sudah Kembali"],
+                        [2, "30/7/2025", "Catur", "X 1", "Pasti bisa", "Rabu, 30 Juli 2025", "Senin / 31/08/2025", "08388863188", "☑ Sudah Kembali"],
+                        [3, "31/7 2025", "Zia", "X 1", "Buku Bahasa Jepang", "Kamis, 31 Juli 2025", "Senin / 03/08/2025", "083863970922", "☑ Sudah Kembali"],
+                        [4, "31/7 2025", "Saleia", "X 2", "Buku Bahasa Jepang", "Kamis, 31 Juli 2025", "Senin / 03/08/2025", "085797490443", "☑ Sudah Kembali"],
+                        [5, "24/9/2025", "Rizky Al-Rasyid", "12.Trp", "Kimia", "Rabu, 24 September 2025", "-", "081313435297", "☐ Belum Kembali"]
                     ];
                     const ws = XLSX.utils.aoa_to_sheet(contohData);
                     const wb = XLSX.utils.book_new();
-                    XLSX.utils.book_append_sheet(wb, ws, "Rekap Peminjaman");
-                    XLSX.writeFile(wb, "Template_Rekap_Peminjaman_Legacy_YWKA.xlsx");
+                    XLSX.utils.book_append_sheet(wb, ws, "Peminjaman Buku");
+                    XLSX.writeFile(wb, "Rekap_Data_Peminjaman_Buku_SMA_YWKA.xlsx");
                 };
 
                 const hapusSemuaLegacy = async () => {
@@ -1221,15 +1330,16 @@
                     filteredLegacy.value.forEach((t, i) => {
                         rows += `<tr>
                             <td style="text-align:center">${i+1}</td>
-                            <td>${t.ID}</td>
-                            <td>${t.Siswa}</td>
-                            <td>${t.Buku}</td>
-                            <td style="text-align:center">${t.TglPinjam || '-'}</td>
+                            <td>${t.TglPinjam || '-'}</td>
+                            <td style="font-weight:bold">${getNamaSiswa(t)}</td>
+                            <td style="text-align:center">${getKelas(t)}</td>
+                            <td>${t.Buku || '-'}</td>
                             <td style="text-align:center">${t.TglKembali || '-'}</td>
-                            <td style="text-align:center;font-weight:bold">${t.StatusTransaksi || 'Selesai'}</td>
+                            <td style="text-align:center">${getKontak(t)}</td>
+                            <td style="text-align:center;font-weight:bold">${isStatusKembali(t) ? 'Sudah Kembali' : 'Belum Kembali'}</td>
                         </tr>`;
                     });
-                    funcPrint(`${getKop()}<div style="padding:10px 40px"><h4 style="text-align:center">DAFTAR REKAP PEMINJAMAN BUKU PERPUSTAKAAN (DATA LEGACY)</h4><table><thead><tr><th>NO</th><th>ID REKAP</th><th>SISWA</th><th>BUKU</th><th>PINJAM</th><th>KEMBALI</th><th>STATUS</th></tr></thead><tbody>${rows||'<tr><td colspan="7" style="text-align:center">Kosong</td></tr>'}</tbody></table>${getTTD()}</div>`, "Laporan Legacy Transaksi");
+                    funcPrint(`${getKop()}<div style="padding:10px 40px"><h4 style="text-align:center">DAFTAR PEMINJAMAN BUKU PERPUSTAKAAN (DATA REKAP LEGACY)</h4><table><thead><tr><th>NO</th><th>WAKTU PINJAM</th><th>NAMA LENGKAP PEMINJAM</th><th>KELAS</th><th>BUKU YANG DIPINJAM</th><th>WAKTU PENGEMBALIAN</th><th>KONTAK PEMINJAM</th><th>KETERANGAN</th></tr></thead><tbody>${rows||'<tr><td colspan="8" style="text-align:center">Kosong</td></tr>'}</tbody></table>${getTTD()}</div>`, "Laporan Legacy Transaksi");
                 };
 
                 const downloadLaporanBukuPDF = () => {
@@ -1283,7 +1393,8 @@
                     selectedBukuIds, selectAllBuku, formBulkRak, bukaBulkEditRak, simpanBulkRak, hapusBukuTerpilih,
                     dataLegacy, filteredLegacy, filterStatusLegacy, previewLegacyData, previewLegacyInfo,
                     prosesUploadExcelLegacy, eksekusiSimpanLegacy, unduhFormatExcelLegacy, hapusSemuaLegacy,
-                    downloadLaporanLegacyPDF, searchSiswaDropdown, searchBukuDropdown, filteredSiswaDropdown, filteredBukuDropdown
+                    downloadLaporanLegacyPDF, searchSiswaDropdown, searchBukuDropdown, filteredSiswaDropdown, filteredBukuDropdown,
+                    getNamaSiswa, getKelas, getKontak, isStatusKembali
                 }
             }
         }).mount('#app')
