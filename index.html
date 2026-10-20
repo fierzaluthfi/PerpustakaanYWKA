@@ -7,6 +7,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         .bg-ywka-blue { background-color: #071a9e; }
@@ -57,6 +58,7 @@
                     <button @click="changeMenu('dashboard')" :class="activeMenu === 'dashboard' ? 'bg-ywka-green border-l-4 border-ywka-orange' : 'hover:bg-blue-800'" class="w-full flex items-center gap-3 px-4 py-3 text-left rounded transition-colors text-sm md:text-base"><i class="fas fa-tachometer-alt w-5 text-center"></i> <span>Dashboard</span></button>
                     <button @click="changeMenu('databuku')" :class="activeMenu === 'databuku' ? 'bg-ywka-green border-l-4 border-ywka-orange' : 'hover:bg-blue-800'" class="w-full flex items-center gap-3 px-4 py-3 text-left rounded transition-colors text-sm md:text-base"><i class="fas fa-book w-5 text-center"></i> <span>Database Buku</span></button>
                     <button @click="changeMenu('datasiswa')" :class="activeMenu === 'datasiswa' ? 'bg-ywka-green border-l-4 border-ywka-orange' : 'hover:bg-blue-800'" class="w-full flex items-center gap-3 px-4 py-3 text-left rounded transition-colors text-sm md:text-base"><i class="fas fa-users w-5 text-center"></i> <span>Database Siswa</span></button>
+                    <button @click="changeMenu('legacy')" :class="activeMenu === 'legacy' ? 'bg-ywka-green border-l-4 border-ywka-orange' : 'hover:bg-blue-800'" class="w-full flex items-center gap-3 px-4 py-3 text-left rounded transition-colors text-sm md:text-base"><i class="fas fa-file-excel w-5 text-center text-green-300"></i> <span>Data Legacy (Rekap)</span></button>
                     <button @click="changeMenu('pengaturan')" :class="activeMenu === 'pengaturan' ? 'bg-ywka-green border-l-4 border-ywka-orange' : 'hover:bg-blue-800'" class="w-full flex items-center gap-3 px-4 py-3 text-left rounded transition-colors mt-4 text-sm md:text-base"><i class="fas fa-cogs w-5 text-center"></i> <span>Pengaturan Sistem</span></button>
                     
                     <!-- TOMBOL AKSES KATALOG PUBLIK -->
@@ -97,10 +99,9 @@
                                 <div class="flex flex-wrap items-center gap-2 w-full md:w-auto">
                                     <button @click="bukaForm('transaksi')" class="flex-1 bg-ywka-orange text-white px-3 py-1.5 rounded shadow font-bold hover:scale-105"><i class="fas fa-plus-circle mr-1"></i> Baru</button>
                                     
-                                    <label class="flex-1 bg-gray-700 text-white px-3 py-1.5 rounded shadow font-bold cursor-pointer text-center hover:bg-gray-600 transition-colors">
-                                        <i class="fas fa-file-csv mr-1"></i> Rekap CSV
-                                        <input type="file" accept=".csv" @change="importCSVTransaksi" class="hidden">
-                                    </label>
+                                    <button @click="changeMenu('legacy')" class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5 rounded shadow font-bold transition-colors text-center" title="Buka Halaman Data Legacy Rekap Peminjaman">
+                                        <i class="fas fa-file-excel mr-1"></i> Rekap Legacy
+                                    </button>
                                     
                                     <button @click="downloadLaporanTransaksi" class="flex-1 bg-ywka-green text-white px-3 py-1.5 rounded shadow font-bold"><i class="fas fa-file-pdf mr-1"></i> PDF</button>
                                     <button @click="hapusSemuaRiwayat" class="flex-1 text-gray-600 hover:bg-gray-200 px-3 py-1.5 rounded border border-gray-300 font-bold" title="Pindahkan semua ke Arsip Lama"><i class="fas fa-archive mr-1"></i> Arsip</button>
@@ -214,7 +215,125 @@
                         </div>
                     </div>
 
-                    <!-- MENU 4: PENGATURAN -->
+                    <!-- MENU 4: DATA LEGACY (REKAP LAMA) -->
+                    <div v-if="activeMenu === 'legacy'" class="space-y-4 md:space-y-6">
+                        <!-- BANNER & STATS LEGACY -->
+                        <div class="bg-gradient-to-r from-blue-900 via-indigo-900 to-ywka-blue rounded-2xl p-5 md:p-6 text-white shadow-xl flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                            <div>
+                                <div class="inline-flex items-center gap-2 bg-white/20 backdrop-blur-sm px-3 py-1 rounded-full text-xs font-semibold mb-2">
+                                    <i class="fas fa-archive text-ywka-orange"></i>
+                                    <span>Legacy Data Management</span>
+                                </div>
+                                <h2 class="text-xl md:text-2xl font-black tracking-tight">Daftar Peminjaman Buku Perpustakaan (Legacy)</h2>
+                                <p class="text-xs md:text-sm text-blue-200 mt-1 max-w-2xl">
+                                    Arsip data rekapan peminjaman buku manual / Excel sebelum terintegrasi ke sistem e-Perpus YWKA. Data ditampilkan secara terpisah agar tidak mempengaruhi sirkulasi aktif.
+                                </p>
+                            </div>
+                            <div class="flex flex-wrap items-center gap-3 w-full md:w-auto">
+                                <label class="flex-1 md:flex-initial bg-ywka-orange hover:bg-orange-600 text-white px-4 py-2.5 rounded-xl shadow-lg font-bold text-xs md:text-sm cursor-pointer flex items-center justify-center gap-2 transition-transform hover:scale-105">
+                                    <i class="fas fa-file-excel text-base"></i>
+                                    <span>Upload Rekap Excel</span>
+                                    <input type="file" accept=".xlsx, .xls, .csv" @change="prosesUploadExcelLegacy" class="hidden">
+                                </label>
+                                <button @click="unduhFormatExcelLegacy" class="bg-white/10 hover:bg-white/20 text-white border border-white/30 px-3.5 py-2.5 rounded-xl font-bold text-xs md:text-sm flex items-center justify-center gap-1.5 transition-colors" title="Download template contoh file Excel">
+                                    <i class="fas fa-download"></i>
+                                    <span>Format Excel</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- STATISTIK KARTU LEGACY -->
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                            <div class="bg-white p-4 rounded-xl shadow border-l-4 border-indigo-600">
+                                <p class="text-xs text-gray-500 font-semibold uppercase">Total Rekap Legacy</p>
+                                <p class="text-2xl font-black text-indigo-700 mt-1">{{ dataLegacy.length }} <span class="text-xs font-normal text-gray-500">transaksi</span></p>
+                            </div>
+                            <div class="bg-white p-4 rounded-xl shadow border-l-4 border-green-600">
+                                <p class="text-xs text-gray-500 font-semibold uppercase">Status Selesai / Dikembalikan</p>
+                                <p class="text-2xl font-black text-green-600 mt-1">{{ dataLegacy.filter(t => t.StatusTransaksi === 'Selesai').length }} <span class="text-xs font-normal text-gray-500">transaksi</span></p>
+                            </div>
+                            <div class="bg-white p-4 rounded-xl shadow border-l-4 border-orange-500">
+                                <p class="text-xs text-gray-500 font-semibold uppercase">Status Meminjam / Belum Selesai</p>
+                                <p class="text-2xl font-black text-ywka-orange mt-1">{{ dataLegacy.filter(t => t.StatusTransaksi !== 'Selesai').length }} <span class="text-xs font-normal text-gray-500">transaksi</span></p>
+                            </div>
+                        </div>
+
+                        <!-- TABEL DATA LEGACY -->
+                        <div class="bg-white rounded-xl shadow overflow-hidden flex flex-col">
+                            <div class="p-4 bg-gray-50 border-b flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
+                                <div class="flex flex-wrap items-center gap-2">
+                                    <h3 class="font-bold text-sm md:text-base text-gray-800 flex items-center gap-2">
+                                        <i class="fas fa-table text-ywka-blue"></i>
+                                        <span>Tabel Arsip Legacy</span>
+                                    </h3>
+                                    <span class="text-xs bg-blue-100 text-blue-800 font-bold px-2.5 py-0.5 rounded-full">{{ filteredLegacy.length }} Data Ditampilkan</span>
+                                    <select v-model="filterStatusLegacy" class="border border-gray-300 rounded px-2.5 py-1 text-xs">
+                                        <option value="">Semua Status</option>
+                                        <option value="Selesai">Selesai</option>
+                                        <option value="Meminjam">Meminjam</option>
+                                    </select>
+                                </div>
+                                <div class="flex flex-wrap items-center gap-2 w-full md:w-auto">
+                                    <button @click="downloadLaporanLegacyPDF" class="bg-ywka-green hover:bg-green-700 text-white px-3.5 py-1.5 rounded shadow text-xs font-bold flex items-center gap-1.5 transition-colors">
+                                        <i class="fas fa-file-pdf"></i>
+                                        <span>Cetak PDF</span>
+                                    </button>
+                                    <button @click="hapusSemuaLegacy" class="text-red-600 hover:bg-red-50 border border-red-200 px-3 py-1.5 rounded text-xs font-bold flex items-center gap-1.5 transition-colors" title="Hapus semua arsip legacy">
+                                        <i class="fas fa-trash-alt"></i>
+                                        <span>Bersihkan Legacy</span>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="overflow-x-auto flex-1">
+                                <table class="w-full text-left text-xs md:text-sm whitespace-nowrap">
+                                    <thead class="bg-gray-100 text-gray-700">
+                                        <tr>
+                                            <th class="px-4 py-3 text-center w-12">No</th>
+                                            <th class="px-4 py-3">ID / No Rekap</th>
+                                            <th class="px-4 py-3">Tanggal Pinjam</th>
+                                            <th class="px-4 py-3">Nama Siswa / Peminjam</th>
+                                            <th class="px-4 py-3">Buku yang Dipinjam</th>
+                                            <th class="px-4 py-3">Tanggal Kembali</th>
+                                            <th class="px-4 py-3 text-center">Status</th>
+                                            <th class="px-4 py-3 text-center w-16">Aksi</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr v-for="(item, idx) in filteredLegacy" :key="item.ID" class="border-b hover:bg-blue-50/50 transition-colors">
+                                            <td class="px-4 py-3 text-center font-mono text-gray-500">{{ idx + 1 }}</td>
+                                            <td class="px-4 py-3 font-mono text-xs text-gray-600">{{ item.ID }}</td>
+                                            <td class="px-4 py-3 font-semibold text-gray-700">{{ item.TglPinjam || '-' }}</td>
+                                            <td class="px-4 py-3 font-bold text-ywka-blue">{{ item.Siswa || '-' }}</td>
+                                            <td class="px-4 py-3 text-gray-800 font-medium">{{ item.Buku || '-' }}</td>
+                                            <td class="px-4 py-3 font-medium" :class="item.TglKembali && item.TglKembali !== '-' ? 'text-green-700' : 'text-gray-400'">{{ item.TglKembali || '-' }}</td>
+                                            <td class="px-4 py-3 text-center">
+                                                <span :class="item.StatusTransaksi === 'Selesai' ? 'bg-green-100 text-green-700 border-green-200' : 'bg-orange-100 text-orange-700 border-orange-200'" class="border px-2.5 py-0.5 rounded-full text-[11px] font-bold">
+                                                    {{ item.StatusTransaksi || 'Selesai' }}
+                                                </span>
+                                            </td>
+                                            <td class="px-4 py-3 text-center">
+                                                <button @click="hapusData('transaksi', 'ID', item.ID)" class="text-red-500 hover:text-red-700 hover:bg-red-50 p-1.5 rounded transition-colors" title="Hapus baris ini">
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
+                                            </td>
+                                        </tr>
+                                        <tr v-if="filteredLegacy.length === 0">
+                                            <td colspan="8" class="text-center py-12 text-gray-500">
+                                                <div class="flex flex-col items-center justify-center space-y-2">
+                                                    <i class="fas fa-folder-open text-4xl text-gray-300"></i>
+                                                    <p class="font-semibold text-gray-600">Belum ada data legacy / rekapan lama.</p>
+                                                    <p class="text-xs text-gray-400 max-w-sm">Klik tombol "Upload Rekap Excel" di atas untuk mengunggah file rekapan Excel lama Anda (.xlsx, .xls, .csv).</p>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- MENU 5: PENGATURAN -->
                     <div v-if="activeMenu === 'pengaturan'" class="space-y-6 pb-10">
                         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
                             <div class="bg-white rounded-xl shadow border-t-4 border-ywka-orange p-6 space-y-4">
@@ -244,8 +363,8 @@
 
             <!-- AREA MODAL FORM POPUP -->
             <div v-if="showModal" class="absolute inset-0 bg-black bg-opacity-60 flex justify-center items-center z-50 p-4">
-                <div class="bg-white rounded-xl shadow-2xl p-5 w-full max-w-lg border-t-8 border-ywka-blue relative">
-                    <button @click="showModal = false" class="absolute top-4 right-4 text-gray-400 text-2xl"><i class="fas fa-times"></i></button>
+                <div class="bg-white rounded-xl shadow-2xl p-5 w-full max-w-lg border-t-8 border-ywka-blue relative max-h-[90vh] overflow-y-auto">
+                    <button @click="showModal = false" class="absolute top-4 right-4 text-gray-400 text-2xl hover:text-gray-600 z-10"><i class="fas fa-times"></i></button>
                     
                     <!-- Pop-up Detail Buku -->
                     <div v-if="modalType === 'detailBuku' && selectedBuku" class="w-full">
@@ -322,13 +441,147 @@
 
                     <!-- Modal Transaksi -->
                     <form v-if="modalType === 'transaksi'" @submit.prevent="simpanTransaksi" class="space-y-4 mt-4">
-                        <h3 class="font-bold text-lg mb-4">Peminjaman Baru</h3>
-                        <div><label class="text-xs font-bold">ID Transaksi</label><input type="text" v-model="formTransaksi.id" readonly class="w-full border bg-gray-100 rounded p-2 text-gray-500 font-mono"></div>
-                        <div><label class="text-xs font-bold">Pilih Siswa</label><select v-model="formTransaksi.siswa" required class="w-full border rounded p-2"><option v-for="s in dataSiswa.filter(x=>x.Status==='Aktif')" :value="s.Nama + ' (' + s.Kelas + ')'">{{ s.NIS }} - {{ s.Nama }}</option></select></div>
-                        <div><label class="text-xs font-bold">Pilih Buku</label><select v-model="formTransaksi.bukuKode" required class="w-full border rounded p-2"><option v-for="b in dataBuku" :value="b.KodeBuku" :disabled="b.Stok<=0">{{ b.KodeBuku }} - {{ b.Judul }} (Sisa: {{b.Stok}})</option></select></div>
-                        <div><label class="text-xs font-bold">Lama Pinjam (Hari)</label><input type="number" v-model="formTransaksi.lamaPinjam" class="w-full border rounded p-2 font-bold text-ywka-orange"></div>
-                        <button type="submit" class="w-full bg-ywka-orange text-white py-2 rounded font-bold mt-2">Proses Peminjaman</button>
+                        <div class="flex items-center justify-between border-b pb-2">
+                            <h3 class="font-bold text-lg text-gray-800 flex items-center gap-2">
+                                <i class="fas fa-hand-holding text-ywka-orange"></i>
+                                <span>Peminjaman Baru</span>
+                            </h3>
+                            <span class="text-xs font-mono bg-gray-100 text-gray-600 px-2 py-0.5 rounded">{{ formTransaksi.id }}</span>
+                        </div>
+
+                        <!-- 2 OPSI PILIHAN SISWA -->
+                        <div class="space-y-1.5">
+                            <label class="text-xs font-bold text-gray-700 block">Pilih Status / Cara Input Siswa:</label>
+                            <div class="grid grid-cols-2 gap-2 bg-gray-100 p-1 rounded-lg border">
+                                <button type="button" @click="formTransaksi.tipeSiswa = 'terdaftar'" :class="formTransaksi.tipeSiswa === 'terdaftar' ? 'bg-ywka-blue text-white shadow font-bold' : 'text-gray-600 hover:text-gray-900 font-medium'" class="py-2 px-3 rounded-md text-xs transition-all flex items-center justify-center gap-1.5">
+                                    <i class="fas fa-id-card"></i>
+                                    <span>Pilih di Data Siswa (Dropdown)</span>
+                                </button>
+                                <button type="button" @click="formTransaksi.tipeSiswa = 'manual'" :class="formTransaksi.tipeSiswa === 'manual' ? 'bg-ywka-orange text-white shadow font-bold' : 'text-gray-600 hover:text-gray-900 font-medium'" class="py-2 px-3 rounded-md text-xs transition-all flex items-center justify-center gap-1.5">
+                                    <i class="fas fa-pen-nib"></i>
+                                    <span>Input Manual Siswa</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- OPSI 1: DROPDOWN DARI DATA SISWA -->
+                        <div v-if="formTransaksi.tipeSiswa === 'terdaftar'" class="space-y-1.5 bg-blue-50/50 p-3 rounded-lg border border-blue-200">
+                            <div class="flex justify-between items-center">
+                                <label class="text-xs font-bold text-gray-700 block">Pilih Siswa dari Data Siswa <span class="text-red-500">*</span></label>
+                                <span class="text-[10px] text-blue-700 font-bold bg-blue-100 px-2 py-0.5 rounded-full">{{ filteredSiswaDropdown.length }} Siswa Aktif</span>
+                            </div>
+                            <div class="relative">
+                                <input type="text" v-model="searchSiswaDropdown" placeholder="Ketik nama atau NIS untuk mencari..." class="w-full border border-gray-300 rounded-md px-2.5 py-1.5 pl-7 text-xs bg-white focus:border-ywka-blue outline-none shadow-sm">
+                                <i class="fas fa-search absolute left-2.5 top-2.5 text-gray-400 text-[10px]"></i>
+                            </div>
+                            <select v-model="formTransaksi.siswa" :required="formTransaksi.tipeSiswa === 'terdaftar'" class="w-full border rounded-md p-2 text-sm bg-white focus:border-ywka-blue outline-none shadow-sm">
+                                <option value="" disabled>-- Pilih Siswa Terdaftar --</option>
+                                <option v-for="s in filteredSiswaDropdown" :key="s.NIS" :value="s.Nama + ' (' + s.Kelas + ')'">
+                                    {{ s.NIS }} - {{ s.Nama }} ({{ s.Kelas }})
+                                </option>
+                                <option v-if="filteredSiswaDropdown.length === 0" disabled>-- Siswa tidak ditemukan --</option>
+                            </select>
+                            <p class="text-[11px] text-gray-500 mt-1">Siswa belum terdaftar? Klik tab <b>"Input Manual Siswa"</b> di atas.</p>
+                        </div>
+
+                        <!-- OPSI 2: INPUT NAMA SECARA MANUAL -->
+                        <div v-else class="space-y-2.5 bg-orange-50/50 p-3 rounded-lg border border-orange-200">
+                            <div>
+                                <label class="text-xs font-bold text-gray-700 block mb-1">Nama Siswa / Peminjam <span class="text-red-500">*</span></label>
+                                <input type="text" v-model="formTransaksi.namaManual" :required="formTransaksi.tipeSiswa === 'manual'" placeholder="Masukkan nama siswa secara manual..." class="w-full border rounded-md p-2 text-sm bg-white focus:border-ywka-orange outline-none shadow-sm">
+                            </div>
+                            <div class="grid grid-cols-2 gap-2">
+                                <div>
+                                    <label class="text-xs font-bold text-gray-700 block mb-1">Kelas (Opsional)</label>
+                                    <input type="text" v-model="formTransaksi.kelasManual" placeholder="Contoh: XII IPA 1" class="w-full border rounded-md p-2 text-sm bg-white focus:border-ywka-orange outline-none shadow-sm">
+                                </div>
+                                <div>
+                                    <label class="text-xs font-bold text-gray-700 block mb-1">No. HP / WA (Opsional)</label>
+                                    <input type="text" v-model="formTransaksi.nohpManual" placeholder="08..." class="w-full border rounded-md p-2 text-sm bg-white focus:border-ywka-orange outline-none shadow-sm">
+                                </div>
+                            </div>
+                            <label class="flex items-center gap-2 pt-1 cursor-pointer text-xs text-gray-700 select-none">
+                                <input type="checkbox" v-model="formTransaksi.simpanSiswaBaru" class="rounded text-ywka-orange focus:ring-0">
+                                <span>Simpan juga siswa ini ke Database Siswa agar terdaftar</span>
+                            </label>
+                        </div>
+
+                        <!-- PILIH BUKU -->
+                        <div class="space-y-1.5">
+                            <label class="text-xs font-bold text-gray-700 block">Pilih Buku <span class="text-red-500">*</span></label>
+                            <div class="relative">
+                                <input type="text" v-model="searchBukuDropdown" placeholder="Cari judul atau kode buku..." class="w-full border border-gray-300 rounded-md px-2.5 py-1.5 pl-7 text-xs bg-white focus:border-ywka-blue outline-none shadow-sm">
+                                <i class="fas fa-search absolute left-2.5 top-2.5 text-gray-400 text-[10px]"></i>
+                            </div>
+                            <select v-model="formTransaksi.bukuKode" required class="w-full border rounded-md p-2 text-sm bg-white focus:border-ywka-blue outline-none shadow-sm">
+                                <option value="" disabled>-- Pilih Buku yang Dipinjam --</option>
+                                <option v-for="b in filteredBukuDropdown" :key="b.KodeBuku" :value="b.KodeBuku" :disabled="b.Stok <= 0">
+                                    {{ b.KodeBuku }} - {{ b.Judul }} (Sisa Stok: {{ b.Stok }})
+                                </option>
+                                <option v-if="filteredBukuDropdown.length === 0" disabled>-- Buku tidak ditemukan --</option>
+                            </select>
+                        </div>
+
+                        <!-- LAMA PINJAM -->
+                        <div>
+                            <label class="text-xs font-bold text-gray-700 block mb-1">Lama Pinjam (Hari)</label>
+                            <input type="number" min="1" v-model="formTransaksi.lamaPinjam" class="w-full border rounded-md p-2 font-bold text-ywka-orange text-sm shadow-sm">
+                        </div>
+
+                        <button type="submit" class="w-full bg-ywka-orange hover:bg-orange-600 transition-colors text-white py-2.5 rounded-lg font-bold mt-2 shadow flex items-center justify-center gap-2">
+                            <i class="fas fa-check-circle"></i>
+                            <span>Proses Peminjaman</span>
+                        </button>
                     </form>
+
+                    <!-- Modal Preview Upload Excel Legacy -->
+                    <div v-if="modalType === 'previewLegacy'" class="space-y-4 mt-2">
+                        <div class="flex items-center gap-2 text-indigo-900 font-bold text-lg border-b pb-2">
+                            <i class="fas fa-file-excel text-green-600 text-xl"></i>
+                            <span>Konfirmasi Impor Rekap Excel</span>
+                        </div>
+                        <div class="bg-blue-50 border border-blue-200 text-blue-900 p-3 rounded-lg text-xs leading-relaxed">
+                            <p>File: <b class="font-mono">{{ previewLegacyInfo.fileName }}</b></p>
+                            <p class="mt-1">Ditemukan <b class="text-base text-indigo-700">{{ previewLegacyData.length }}</b> baris data peminjaman buku yang siap diimpor sebagai <b>Data Legacy</b>.</p>
+                        </div>
+
+                        <!-- Pratinjau Data -->
+                        <div>
+                            <p class="text-xs font-bold text-gray-700 mb-1.5">Pratinjau Data (Maks. 5 baris pertama):</p>
+                            <div class="overflow-x-auto border rounded-lg max-h-48">
+                                <table class="w-full text-left text-xs whitespace-nowrap">
+                                    <thead class="bg-gray-100 text-gray-700 font-semibold">
+                                        <tr>
+                                            <th class="p-2">Pinjam</th>
+                                            <th class="p-2">Siswa / Peminjam</th>
+                                            <th class="p-2">Buku</th>
+                                            <th class="p-2">Kembali</th>
+                                            <th class="p-2">Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr v-for="(p, i) in previewLegacyData.slice(0, 5)" :key="i" class="border-b">
+                                            <td class="p-2 font-mono">{{ p.TglPinjam }}</td>
+                                            <td class="p-2 font-semibold text-ywka-blue">{{ p.Siswa }}</td>
+                                            <td class="p-2 text-gray-800">{{ p.Buku }}</td>
+                                            <td class="p-2 font-mono">{{ p.TglKembali }}</td>
+                                            <td class="p-2"><span class="bg-gray-100 px-2 py-0.5 rounded text-[10px] font-bold">{{ p.StatusTransaksi }}</span></td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <div class="flex gap-2 justify-end pt-3 border-t">
+                            <button type="button" @click="showModal = false" class="bg-gray-200 hover:bg-gray-300 text-gray-700 px-4 py-2 rounded-lg text-xs font-bold transition-colors">
+                                Batal
+                            </button>
+                            <button type="button" @click="eksekusiSimpanLegacy" :disabled="loading" class="bg-ywka-green hover:bg-green-700 text-white px-5 py-2 rounded-lg text-xs font-bold shadow flex items-center gap-1.5 transition-colors disabled:opacity-50">
+                                <i class="fas" :class="loading ? 'fa-spinner fa-spin' : 'fa-check'"></i>
+                                <span>Simpan {{ previewLegacyData.length }} Data ke Legacy</span>
+                            </button>
+                        </div>
+                    </div>
                     
                     <!-- Modal User -->
                     <form v-if="modalType === 'user'" @submit.prevent="simpanUser" class="space-y-4 mt-4">
@@ -396,21 +649,90 @@
                     }
                 }
                 const formSiswa = ref({ nis: '', nama: '', kelas: '', nohp: '', status: 'Aktif', Foto: '', file: null }); 
-                const formTransaksi = ref({ id: '', siswa: '', bukuKode: '', lamaPinjam: 3 });
+                const formTransaksi = ref({ id: '', tipeSiswa: 'terdaftar', siswa: '', namaManual: '', kelasManual: '', nohpManual: '', bukuKode: '', lamaPinjam: 3, simpanSiswaBaru: false });
+                const searchSiswaDropdown = ref('');
+                const searchBukuDropdown = ref('');
+
+                const filteredSiswaDropdown = computed(() => {
+                    const list = dataSiswa.value.filter(x => x.Status === 'Aktif');
+                    if (!searchSiswaDropdown.value) return list;
+                    const q = searchSiswaDropdown.value.toLowerCase().trim();
+                    return list.filter(s => 
+                        (s.Nama && s.Nama.toLowerCase().includes(q)) || 
+                        (s.NIS && String(s.NIS).toLowerCase().includes(q)) || 
+                        (s.Kelas && s.Kelas.toLowerCase().includes(q))
+                    );
+                });
+
+                const filteredBukuDropdown = computed(() => {
+                    if (!searchBukuDropdown.value) return dataBuku.value;
+                    const q = searchBukuDropdown.value.toLowerCase().trim();
+                    return dataBuku.value.filter(b => 
+                        (b.Judul && b.Judul.toLowerCase().includes(q)) || 
+                        (b.KodeBuku && b.KodeBuku.toLowerCase().includes(q)) ||
+                        (b.Kategori && b.Kategori.toLowerCase().includes(q))
+                    );
+                });
+
                 const formUser = ref({ email: '', password: '', nama: '', role: 'Petugas' });
 
+                // STATE & COMPUTED DATA LEGACY (REKAP EXCEL)
+                const filterStatusLegacy = ref('');
+                const previewLegacyData = ref([]);
+                const previewLegacyInfo = ref({ fileName: '' });
+
+                const dataLegacy = computed(() => {
+                    return dataTransaksi.value.filter(t => t.Hidden === 'legacy' || t.hidden === 'legacy' || (t.ID && String(t.ID).startsWith('LEGACY-')));
+                });
+
+                const filteredLegacy = computed(() => {
+                    return dataLegacy.value.filter(item => {
+                        const matchStatus = !filterStatusLegacy.value || item.StatusTransaksi === filterStatusLegacy.value;
+                        const q = searchQuery.value ? searchQuery.value.toLowerCase() : '';
+                        const matchQuery = !q || 
+                            (item.Siswa && item.Siswa.toLowerCase().includes(q)) ||
+                            (item.Buku && item.Buku.toLowerCase().includes(q)) ||
+                            (item.TglPinjam && item.TglPinjam.toLowerCase().includes(q)) ||
+                            (item.ID && String(item.ID).toLowerCase().includes(q));
+                        return matchStatus && matchQuery;
+                    });
+                });
+
                 const filterBulan = ref(''); const filterKategoriBuku = ref(''); const filterRakBuku = ref('');
-                const daftarBulan = computed(() => { const b = new Set(); dataTransaksi.value.filter(t => t.Hidden !== 'true').forEach(t => { if (t.TglPinjam && t.TglPinjam !== '-') b.add(t.TglPinjam.substring(3)); }); return Array.from(b).map(v => ({ value: v, label: v })); });
+                const daftarBulan = computed(() => { 
+                    const b = new Set(); 
+                    dataTransaksi.value
+                        .filter(t => t.Hidden !== 'true' && t.hidden !== 'true' && t.Hidden !== 'legacy' && t.hidden !== 'legacy' && !(t.ID && String(t.ID).startsWith('LEGACY-')))
+                        .forEach(t => { 
+                            const tgl = t.TglPinjam || t.tglpinjam || '';
+                            if (tgl && tgl !== '-') b.add(tgl.substring(3)); 
+                        }); 
+                    return Array.from(b).map(v => ({ value: v, label: v })); 
+                });
+                
                 const filteredTransaksi = computed(() => {
-                    if (filterBulan.value === 'ARSIP') return dataTransaksi.value.filter(t => t.Hidden === 'true');
-                    return dataTransaksi.value.filter(t => t.Hidden !== 'true' && (!filterBulan.value || t.TglPinjam.includes(filterBulan.value) || t.TglKembali.includes(filterBulan.value)));
+                    if (filterBulan.value === 'ARSIP') return dataTransaksi.value.filter(t => t.Hidden === 'true' || t.hidden === 'true');
+                    return dataTransaksi.value.filter(t => 
+                        t.Hidden !== 'true' && 
+                        t.hidden !== 'true' && 
+                        t.Hidden !== 'legacy' && 
+                        t.hidden !== 'legacy' && 
+                        !(t.ID && String(t.ID).startsWith('LEGACY-')) && 
+                        (!filterBulan.value || (t.TglPinjam && t.TglPinjam.includes(filterBulan.value)) || (t.TglKembali && t.TglKembali.includes(filterBulan.value)))
+                    );
                 });
                 const daftarKategori = computed(() => { const k = new Set(); dataBuku.value.forEach(b => k.add(b.Kategori)); return Array.from(k).sort(); });
                 const daftarRak = computed(() => { const r = new Set(); dataBuku.value.forEach(b => r.add(b.Rak)); return Array.from(r).sort(); });
                 const filteredBuku = computed(() => dataBuku.value.filter(b => (!filterKategoriBuku.value || b.Kategori === filterKategoriBuku.value) && (!filterRakBuku.value || b.Rak === filterRakBuku.value) && (!searchQuery.value || b.Judul.toLowerCase().includes(searchQuery.value.toLowerCase()) || b.KodeBuku.toLowerCase().includes(searchQuery.value.toLowerCase()))));
                 const filteredSiswa = computed(() => dataSiswa.value.filter(s => !searchQuery.value || s.Nama.toLowerCase().includes(searchQuery.value.toLowerCase()) || s.NIS.toLowerCase().includes(searchQuery.value.toLowerCase())));
 
-                const menuTitle = computed(() => activeMenu.value === 'dashboard' ? 'Dashboard' : activeMenu.value === 'databuku' ? 'Data Buku' : activeMenu.value === 'datasiswa' ? 'Data Siswa' : 'Pengaturan');
+                const menuTitle = computed(() => {
+                    if (activeMenu.value === 'dashboard') return 'Dashboard';
+                    if (activeMenu.value === 'databuku') return 'Database Buku';
+                    if (activeMenu.value === 'datasiswa') return 'Database Siswa';
+                    if (activeMenu.value === 'legacy') return 'Data Legacy (Rekap Peminjaman)';
+                    return 'Pengaturan Sistem';
+                });
                 const changeMenu = (menu) => { activeMenu.value = menu; mobileMenuOpen.value = false; }
                 // --- AWAL FITUR SESI & AUTO LOGOUT ---
                 const resetIdleTimer = () => {
@@ -457,7 +779,11 @@
                         dataBuku.value = resB.data || []; dataSiswa.value = resS.data || []; 
                         dataTransaksi.value = (resT.data || []).reverse(); dataUsers.value = resU.data || [];
                         if(resP.data) formPengaturan.value = resP.data;
-                        statistik.value = { totalBuku: dataBuku.value.length, totalSiswa: dataSiswa.value.length, peminjamanAktif: dataTransaksi.value.filter(t => t.StatusTransaksi === 'Meminjam').length };
+                        statistik.value = { 
+                            totalBuku: dataBuku.value.length, 
+                            totalSiswa: dataSiswa.value.length, 
+                            peminjamanAktif: dataTransaksi.value.filter(t => t.StatusTransaksi === 'Meminjam' && t.Hidden !== 'legacy' && t.Hidden !== 'true' && !(t.ID && String(t.ID).startsWith('LEGACY-'))).length 
+                        };
                     } catch (err) { console.error(err); }
                     loading.value = false; showModal.value = false;
                 }
@@ -537,37 +863,80 @@
                     await fetchSemuaData();
                 }
 
-               const simpanTransaksi = async () => {
+                const simpanTransaksi = async () => {
                     loading.value = true; 
                     try {
                         const bk = dataBuku.value.find(b => b.KodeBuku === formTransaksi.value.bukuKode);
-                        if (!bk) { alert("Pilih buku!"); loading.value=false; return; }
+                        if (!bk) { alert("Pilih buku terlebih dahulu!"); loading.value=false; return; }
 
-                        // 1. Simpan transaksi ke Supabase terlebih dahulu
-                        const { error } = await supaClient.from('transaksi').insert({ 
+                        let namaSiswa = '';
+                        if (formTransaksi.value.tipeSiswa === 'terdaftar') {
+                            namaSiswa = (formTransaksi.value.siswa || '').trim();
+                        } else {
+                            const nama = (formTransaksi.value.namaManual || '').trim();
+                            if (!nama) { alert("Nama siswa wajib diisi!"); loading.value = false; return; }
+                            const kelas = (formTransaksi.value.kelasManual || '').trim();
+                            namaSiswa = kelas ? `${nama} (${kelas})` : nama;
+
+                            // Jika dicentang simpan ke database siswa
+                            if (formTransaksi.value.simpanSiswaBaru) {
+                                try {
+                                    const nisBaru = 'SW' + Date.now().toString().slice(-6);
+                                    await supaClient.from('siswa').insert({
+                                        NIS: nisBaru,
+                                        Nama: nama,
+                                        Kelas: kelas || 'Umum',
+                                        NoHP: (formTransaksi.value.nohpManual || '').trim(),
+                                        Status: 'Aktif',
+                                        Foto: ''
+                                    });
+                                } catch (errSiswa) {
+                                    console.warn("Gagal auto-register siswa:", errSiswa);
+                                }
+                            }
+                        }
+
+                        if (!namaSiswa) {
+                            alert("Harap pilih atau isi nama siswa peminjam!");
+                            loading.value = false;
+                            return;
+                        }
+
+                        // 1. Siapkan payload transaksi
+                        const trxPayload = { 
                             ID: formTransaksi.value.id, 
-                            Siswa: formTransaksi.value.siswa, 
+                            Siswa: namaSiswa, 
                             Buku: `${bk.Judul} (${bk.KodeBuku})`, 
                             TglPinjam: new Date().toLocaleDateString('en-GB'), 
                             StatusTransaksi: 'Meminjam', 
                             TglKembali: '-', 
-                            LamaPinjam: formTransaksi.value.lamaPinjam, 
+                            LamaPinjam: parseInt(formTransaksi.value.lamaPinjam) || 3, 
                             Denda: 0, 
                             Hidden: '' 
-                        });
+                        };
+
+                        let { error } = await supaClient.from('transaksi').insert(trxPayload);
                         
-                        // Jika gagal simpan transaksi, lemparkan error dan STOP proses
+                        // Fallback jika kolom Hidden belum ada di Supabase
+                        if (error && error.message && error.message.toLowerCase().includes('hidden')) {
+                            delete trxPayload.Hidden;
+                            const resRetry = await supaClient.from('transaksi').insert(trxPayload);
+                            error = resRetry.error;
+                        }
+
                         if (error) throw error; 
 
                         // 2. Jika transaksi sukses, BARU kurangi stok buku
-                        await supaClient.from('buku').update({ Stok: bk.Stok - 1 }).eq('KodeBuku', bk.KodeBuku); 
+                        await supaClient.from('buku').update({ Stok: Math.max(0, bk.Stok - 1) }).eq('KodeBuku', bk.KodeBuku); 
                         
                         alert("Peminjaman berhasil dicatat!");
+                        showModal.value = false;
                     } catch (err) {
                         console.error("Error Simpan Transaksi:", err);
-                        alert("Gagal menyimpan transaksi! Cek Console (F12) untuk detail error.");
+                        alert("Gagal menyimpan transaksi! Error: " + (err.message || 'Cek konsol F12'));
                     }
                     await fetchSemuaData();
+                    loading.value = false;
                 }
 
                const ubahStatus = async (id, stat) => {
@@ -662,6 +1031,207 @@
                 const getKop = () => formPengaturan.value.KopSurat ? `<img src="${formPengaturan.value.KopSurat}" style="width:100%;display:block;margin:0;">` : `<h2 style="text-align:center">SMA YWKA BANDUNG</h2><hr style="border:1px solid #000">`;
                 const getTTD = () => `<div style="width:300px;float:right;text-align:center;margin-top:30px;font-size:11px"><p>Bandung, ${new Date().toLocaleDateString('id-ID')}<br>Kepala Perpustakaan,</p><br><br><br><p style="font-weight:bold;text-decoration:underline;margin-bottom:2px">${formPengaturan.value.KepalaPerpus}</p><p style="margin-top:0">NIP/NIK. ${formPengaturan.value.NIP}</p></div>`;
                 
+                const formatExcelDate = (val) => {
+                    if (!val) return '-';
+                    if (typeof val === 'number' && val > 20000 && val < 60000) {
+                        const jsDate = new Date(Math.round((val - 25569) * 86400 * 1000));
+                        const d = String(jsDate.getDate()).padStart(2, '0');
+                        const m = String(jsDate.getMonth() + 1).padStart(2, '0');
+                        const y = jsDate.getFullYear();
+                        return `${d}/${m}/${y}`;
+                    }
+                    if (val instanceof Date) {
+                        const d = String(val.getDate()).padStart(2, '0');
+                        const m = String(val.getMonth() + 1).padStart(2, '0');
+                        const y = val.getFullYear();
+                        return `${d}/${m}/${y}`;
+                    }
+                    return String(val).trim();
+                };
+
+                const prosesUploadExcelLegacy = (e) => {
+                    const file = e.target.files[0];
+                    if (!file) return;
+
+                    if (typeof XLSX === 'undefined') {
+                        alert("Pustaka SheetJS belum termuat. Pastikan terhubung ke internet.");
+                        return;
+                    }
+
+                    const reader = new FileReader();
+                    reader.onload = (evt) => {
+                        try {
+                            const data = new Uint8Array(evt.target.result);
+                            const workbook = XLSX.read(data, { type: 'array', cellDates: true });
+                            const sheetName = workbook.SheetNames[0];
+                            const worksheet = workbook.Sheets[sheetName];
+                            const rows = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '' });
+
+                            if (rows.length < 2) {
+                                alert("File Excel kosong atau tidak memiliki baris data.");
+                                return;
+                            }
+
+                            // Cari baris header otomatis
+                            let headerIdx = -1;
+                            for (let i = 0; i < Math.min(rows.length, 10); i++) {
+                                const rowStr = rows[i].map(c => String(c).toLowerCase()).join(' ');
+                                if (rowStr.includes('nama') || rowStr.includes('siswa') || rowStr.includes('judul') || rowStr.includes('buku') || rowStr.includes('pinjam')) {
+                                    headerIdx = i;
+                                    break;
+                                }
+                            }
+
+                            if (headerIdx === -1) headerIdx = 0;
+                            const headers = rows[headerIdx].map(h => String(h).trim().toLowerCase());
+
+                            // Deteksi indeks kolom
+                            let colSiswa = headers.findIndex(h => /siswa|nama|peminjam/i.test(h));
+                            let colKelas = headers.findIndex(h => /kelas|tingkat|rombel/i.test(h));
+                            let colBuku = headers.findIndex(h => /buku|judul|pustaka|koleksi/i.test(h));
+                            let colTglPinjam = headers.findIndex(h => /tgl.*pinjam|tanggal.*pinjam|pinjam/i.test(h));
+                            let colTglKembali = headers.findIndex(h => /tgl.*kembali|tanggal.*kembali|kembali/i.test(h));
+                            let colStatus = headers.findIndex(h => /status|keterangan|ket/i.test(h));
+
+                            // Fallback jika tidak terdeteksi via nama kolom
+                            if (colSiswa === -1) colSiswa = 0;
+                            if (colBuku === -1) colBuku = 1;
+                            if (colTglPinjam === -1) colTglPinjam = 2;
+                            if (colTglKembali === -1) colTglKembali = 3;
+
+                            const parsedData = [];
+                            for (let i = headerIdx + 1; i < rows.length; i++) {
+                                const r = rows[i];
+                                if (!r || r.every(c => !String(c).trim())) continue;
+
+                                let siswaVal = r[colSiswa] ? String(r[colSiswa]).trim() : '';
+                                if (!siswaVal) continue;
+
+                                if (colKelas !== -1 && r[colKelas] && String(r[colKelas]).trim()) {
+                                    siswaVal += ` (${String(r[colKelas]).trim()})`;
+                                }
+
+                                let bukuVal = colBuku !== -1 && r[colBuku] ? String(r[colBuku]).trim() : 'Buku Perpustakaan';
+                                let tglPinjamVal = colTglPinjam !== -1 ? formatExcelDate(r[colTglPinjam]) : '-';
+                                let tglKembaliVal = colTglKembali !== -1 ? formatExcelDate(r[colTglKembali]) : '-';
+                                let statusVal = colStatus !== -1 && r[colStatus] ? String(r[colStatus]).trim() : 'Selesai';
+                                if (!statusVal || statusVal === '-') statusVal = 'Selesai';
+
+                                parsedData.push({
+                                    ID: 'LEGACY-' + Math.floor(100000 + Math.random() * 900000) + '-' + (i - headerIdx),
+                                    Siswa: siswaVal,
+                                    Buku: bukuVal,
+                                    TglPinjam: tglPinjamVal,
+                                    TglKembali: tglKembaliVal,
+                                    StatusTransaksi: statusVal,
+                                    LamaPinjam: 3,
+                                    Denda: 0,
+                                    Hidden: 'legacy'
+                                });
+                            }
+
+                            if (parsedData.length === 0) {
+                                alert("Tidak ada baris data peminjaman yang valid dari file Excel.");
+                                return;
+                            }
+
+                            previewLegacyData.value = parsedData;
+                            previewLegacyInfo.value = { fileName: file.name };
+                            modalType.value = 'previewLegacy';
+                            showModal.value = true;
+                        } catch (err) {
+                            console.error(err);
+                            alert("Gagal membaca file Excel. Pastikan format file valid (.xlsx / .xls / .csv).");
+                        }
+                        e.target.value = '';
+                    };
+                    reader.readAsArrayBuffer(file);
+                };
+
+                const eksekusiSimpanLegacy = async () => {
+                    if (previewLegacyData.value.length === 0) return;
+                    loading.value = true;
+                    try {
+                        const batchSize = 50;
+                        const total = previewLegacyData.value.length;
+                        for (let i = 0; i < total; i += batchSize) {
+                            const batch = previewLegacyData.value.slice(i, i + batchSize);
+                            let { error } = await supaClient.from('transaksi').insert(batch);
+                            // Fallback jika kolom Hidden belum ada di Supabase
+                            if (error && error.message && error.message.toLowerCase().includes('hidden')) {
+                                const batchFallback = batch.map(({ Hidden, ...rest }) => rest);
+                                const resFallback = await supaClient.from('transaksi').insert(batchFallback);
+                                error = resFallback.error;
+                            }
+                            if (error) throw error;
+                        }
+                        alert(`Berhasil mengimpor ${total} data peminjaman legacy!`);
+                        showModal.value = false;
+                        previewLegacyData.value = [];
+                        await fetchSemuaData();
+                    } catch (err) {
+                        console.error("Gagal simpan legacy:", err);
+                        alert("Gagal menyimpan data ke database. Error: " + (err.message || 'Cek console F12'));
+                    }
+                    loading.value = false;
+                };
+
+                const unduhFormatExcelLegacy = () => {
+                    if (typeof XLSX === 'undefined') {
+                        alert("Pustaka SheetJS belum termuat.");
+                        return;
+                    }
+                    const contohData = [
+                        ["DAFTAR PEMINJAMAN BUKU PERPUSTAKAAN (LEGACY)"],
+                        [],
+                        ["No", "Nama Siswa", "Kelas", "Judul Buku", "Tanggal Pinjam", "Tanggal Kembali", "Status"],
+                        [1, "Ahmad Fauzi", "X IPA 1", "Laskar Pelangi", "10/01/2024", "15/01/2024", "Selesai"],
+                        [2, "Siti Rahmawati", "XI IPS 2", "Bumi Manusia", "12/01/2024", "17/01/2024", "Selesai"],
+                        [3, "Budi Santoso", "XII IPA 3", "Fisika Dasar SMA", "15/01/2024", "-", "Meminjam"]
+                    ];
+                    const ws = XLSX.utils.aoa_to_sheet(contohData);
+                    const wb = XLSX.utils.book_new();
+                    XLSX.utils.book_append_sheet(wb, ws, "Rekap Peminjaman");
+                    XLSX.writeFile(wb, "Template_Rekap_Peminjaman_Legacy_YWKA.xlsx");
+                };
+
+                const hapusSemuaLegacy = async () => {
+                    if (dataLegacy.value.length === 0) {
+                        alert("Belum ada data legacy yang tersimpan.");
+                        return;
+                    }
+                    if (confirm(`Yakin ingin menghapus seluruh ${dataLegacy.value.length} data peminjaman legacy? Tindakan ini tidak dapat dibatalkan.`) && prompt("Masukkan Password Konfirmasi (ywka123):") === 'ywka123') {
+                        loading.value = true;
+                        try {
+                            const { error } = await supaClient.from('transaksi').delete().eq('Hidden', 'legacy');
+                            if (error) throw error;
+                            await supaClient.from('transaksi').delete().like('ID', 'LEGACY-%');
+                            alert("Seluruh data legacy berhasil dibersihkan!");
+                            await fetchSemuaData();
+                        } catch (err) {
+                            console.error(err);
+                            alert("Gagal menghapus data legacy.");
+                        }
+                        loading.value = false;
+                    }
+                };
+
+                const downloadLaporanLegacyPDF = () => {
+                    let rows = '';
+                    filteredLegacy.value.forEach((t, i) => {
+                        rows += `<tr>
+                            <td style="text-align:center">${i+1}</td>
+                            <td>${t.ID}</td>
+                            <td>${t.Siswa}</td>
+                            <td>${t.Buku}</td>
+                            <td style="text-align:center">${t.TglPinjam || '-'}</td>
+                            <td style="text-align:center">${t.TglKembali || '-'}</td>
+                            <td style="text-align:center;font-weight:bold">${t.StatusTransaksi || 'Selesai'}</td>
+                        </tr>`;
+                    });
+                    funcPrint(`${getKop()}<div style="padding:10px 40px"><h4 style="text-align:center">DAFTAR REKAP PEMINJAMAN BUKU PERPUSTAKAAN (DATA LEGACY)</h4><table><thead><tr><th>NO</th><th>ID REKAP</th><th>SISWA</th><th>BUKU</th><th>PINJAM</th><th>KEMBALI</th><th>STATUS</th></tr></thead><tbody>${rows||'<tr><td colspan="7" style="text-align:center">Kosong</td></tr>'}</tbody></table>${getTTD()}</div>`, "Laporan Legacy Transaksi");
+                };
+
                 const downloadLaporanBukuPDF = () => {
                     let rows = ''; filteredBuku.value.forEach((b, i) => rows += `<tr><td style="text-align:center">${i+1}</td><td>${b.KodeBuku}</td><td style="font-weight:bold">${b.Judul}</td><td>${b.Pengarang}</td><td style="text-align:center">${b.Kategori}</td><td style="text-align:center;font-weight:bold">${b.Rak}</td><td style="text-align:center">${b.Stok}</td></tr>`);
                     funcPrint(`${getKop()}<div style="padding:10px 40px"><h4 style="text-align:center">LAPORAN STOK BUKU</h4><table><thead><tr><th>NO</th><th>ID BUKU</th><th>JUDUL</th><th>PENGARANG</th><th>KATEGORI</th><th>RAK</th><th>STOK</th></tr></thead><tbody>${rows||'<tr><td colspan="7" style="text-align:center">Kosong</td></tr>'}</tbody></table>${getTTD()}</div>`, "Laporan Buku");
@@ -674,7 +1244,28 @@
                 const cetakKartuSiswa = (s) => funcPrint(`<div style="width:5.4cm;height:8.6cm;border:2px solid #071a9e;border-radius:8px;text-align:center;overflow:hidden;position:relative;margin:20px auto"><div style="background:#071a9e;color:white;padding:10px 5px;font-size:10px;font-weight:bold">PERPUSTAKAAN DIGITAL<br>SMA YWKA</div><div style="width:2.5cm;height:3cm;background:#e2e8f0;margin:10px auto;border:1px solid #ccc;display:flex;align-items:center;justify-content:center;overflow:hidden">${s.Foto?`<img src="${s.Foto}" style="width:100%;height:100%;object-fit:cover">`:'FOTO'}</div><div style="font-size:12px;font-weight:900;color:#071a9e;text-transform:uppercase">${s.Nama}</div><div style="font-size:11px;font-weight:bold;margin-bottom:5px">${s.NIS} | ${s.Kelas}</div><img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${s.NIS}" style="width:2.2cm;height:2.2cm"><div style="position:absolute;bottom:0;width:100%;background:#fd5203;color:white;font-size:8px;padding:4px 0;font-weight:bold">KARTU ANGGOTA</div></div>`, "Kartu "+s.Nama);
 
                 const lihatDetailBuku = (buku) => { selectedBuku.value = buku; modalType.value = 'detailBuku'; showModal.value = true; }
-                const bukaForm = (tipe) => { modalType.value = tipe; showModal.value = true; isEditMode.value = false; if(tipe === 'buku') formBuku.value = { kode: '', judul: '', pengarang: '', penerbit: '', tahun: '', kategori: '', rak: '', stok: 1, Gambar: '', file: null }; if(tipe === 'siswa') formSiswa.value = { nis: '', nama: '', kelas: '', nohp: '', status: 'Aktif', Foto: '', file: null }; if(tipe === 'transaksi') formTransaksi.value = { id: 'TRX-' + Math.floor(Math.random() * 100000), siswa: '', bukuKode: '', lamaPinjam: formPengaturan.value.LamaPinjam }; }
+                const bukaForm = (tipe) => { 
+                    modalType.value = tipe; 
+                    showModal.value = true; 
+                    isEditMode.value = false; 
+                    if(tipe === 'buku') formBuku.value = { kode: '', judul: '', pengarang: '', penerbit: '', tahun: '', kategori: '', rak: '', stok: 1, Gambar: '', file: null }; 
+                    if(tipe === 'siswa') formSiswa.value = { nis: '', nama: '', kelas: '', nohp: '', status: 'Aktif', Foto: '', file: null }; 
+                    if(tipe === 'transaksi') {
+                        searchSiswaDropdown.value = '';
+                        searchBukuDropdown.value = '';
+                        formTransaksi.value = { 
+                            id: 'TRX-' + Date.now().toString().slice(-6) + Math.floor(Math.random() * 100), 
+                            tipeSiswa: 'terdaftar', 
+                            siswa: '', 
+                            namaManual: '', 
+                            kelasManual: '', 
+                            nohpManual: '', 
+                            bukuKode: '', 
+                            lamaPinjam: formPengaturan.value.LamaPinjam || 3,
+                            simpanSiswaBaru: false
+                        }; 
+                    }
+                }
                 const editBuku = (buku) => { modalType.value = 'buku'; isEditMode.value = true; formBuku.value = { kode: buku.KodeBuku, judul: buku.Judul, pengarang: buku.Pengarang, penerbit: buku.Penerbit, tahun: buku.Tahun, kategori: buku.Kategori, rak: buku.Rak, stok: parseInt(buku.Stok) || 0, Gambar: buku.Gambar, file: null }; showModal.value = true; }
                 const editSiswa = (siswa) => { modalType.value = 'siswa'; isEditMode.value = true; formSiswa.value = { nis: siswa.NIS, nama: siswa.Nama, kelas: siswa.Kelas, nohp: siswa.NoHP || '', status: siswa.Status, Foto: siswa.Foto, file: null }; showModal.value = true; }
                 const bukaFormUser = () => { modalType.value = 'user'; showModal.value = true; formUser.value = { email: '', password: '', nama: '', role: 'Petugas' }; }
@@ -689,7 +1280,10 @@
                     simpanUser, hapusData, simpanPengaturan, simpanBuku, simpanSiswa, simpanTransaksi, 
                     ubahStatus, downloadLaporanTransaksi, downloadLaporanBukuPDF, cetakLabelBuku, cetakKartuSiswa, 
                     dataSiswa, dataBuku, hapusSemuaRiwayat, selectedBuku, lihatDetailBuku, importCSVTransaksi,
-                    selectedBukuIds, selectAllBuku, formBulkRak, bukaBulkEditRak, simpanBulkRak, hapusBukuTerpilih
+                    selectedBukuIds, selectAllBuku, formBulkRak, bukaBulkEditRak, simpanBulkRak, hapusBukuTerpilih,
+                    dataLegacy, filteredLegacy, filterStatusLegacy, previewLegacyData, previewLegacyInfo,
+                    prosesUploadExcelLegacy, eksekusiSimpanLegacy, unduhFormatExcelLegacy, hapusSemuaLegacy,
+                    downloadLaporanLegacyPDF, searchSiswaDropdown, searchBukuDropdown, filteredSiswaDropdown, filteredBukuDropdown
                 }
             }
         }).mount('#app')

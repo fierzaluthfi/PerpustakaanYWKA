@@ -51,7 +51,7 @@
 
             <!-- GRID DAFTAR BUKU (SESUAI REFERENSI) -->
             <div v-else class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 md:gap-6">
-                <div v-for="buku in filteredBuku" :key="buku.KodeBuku" class="bg-white rounded-xl shadow-md overflow-hidden border hover:shadow-xl transition-all flex flex-col group">
+                <div v-for="buku in filteredBuku" :key="buku.KodeBuku" @click="lihatDetailBuku(buku)" class="bg-white rounded-xl shadow-md overflow-hidden border hover:shadow-xl hover:-translate-y-1 transition-all duration-200 flex flex-col group cursor-pointer" title="Klik untuk melihat detail & informasi buku">
                     
                     <!-- Cover Buku & Badge Stok -->
                     <div class="relative h-48 md:h-60 bg-gray-200 overflow-hidden flex items-center justify-center">
@@ -64,13 +64,20 @@
                                 <i class="fas" :class="buku.Stok > 0 ? 'fa-check-circle' : 'fa-times-circle'"></i> {{ buku.Stok > 0 ? 'Tersedia' : 'Habis' }}
                             </span>
                         </div>
+
+                        <!-- Hover Overlay Hint -->
+                        <div class="absolute inset-0 bg-blue-900/40 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center">
+                            <span class="bg-white/95 text-ywka-blue px-3 py-1.5 rounded-full text-xs font-bold shadow-lg flex items-center gap-1.5 transform scale-90 group-hover:scale-100 transition-transform">
+                                <i class="fas fa-info-circle text-ywka-orange"></i> Detail Buku
+                            </span>
+                        </div>
                     </div>
 
                     <!-- Informasi Buku -->
                     <div class="p-3 md:p-4 flex flex-col flex-grow justify-between space-y-2">
                         <div>
                             <span class="text-[10px] uppercase tracking-wider font-extrabold text-blue-800 bg-blue-100 px-2 py-0.5 rounded">{{ buku.Kategori }}</span>
-                            <h3 class="font-bold text-xs md:text-sm text-gray-800 line-clamp-2 mt-1 leading-snug" :title="buku.Judul">{{ buku.Judul }}</h3>
+                            <h3 class="font-bold text-xs md:text-sm text-gray-800 line-clamp-2 mt-1 leading-snug group-hover:text-ywka-blue transition-colors" :title="buku.Judul">{{ buku.Judul }}</h3>
                             <p class="text-[11px] text-gray-500 truncate mt-1"><i class="fas fa-pen-nib mr-1"></i>{{ buku.Pengarang }}</p>
                         </div>
                         <div class="border-t pt-2 flex justify-between items-center text-xs">
@@ -87,6 +94,91 @@
                 <p class="text-gray-500 font-semibold">Buku yang Anda cari tidak ditemukan.</p>
             </div>
         </main>
+
+        <!-- MODAL DETAIL DAN INFORMASI BUKU (CLIENT) -->
+        <div v-if="showModalDetail && selectedBuku" class="fixed inset-0 bg-black/60 backdrop-blur-sm flex justify-center items-center z-50 p-4 overflow-y-auto" @click.self="tutupModalDetail">
+            <div class="bg-white rounded-2xl shadow-2xl p-5 md:p-6 w-full max-w-lg border-t-8 border-ywka-blue relative transform transition-all animate-in fade-in zoom-in-95 duration-200">
+                <!-- Tombol Close (X) -->
+                <button @click="tutupModalDetail" class="absolute top-4 right-4 text-gray-400 hover:text-gray-700 text-xl w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 transition-colors" title="Tutup">
+                    <i class="fas fa-times"></i>
+                </button>
+                
+                <!-- Judul Modal -->
+                <h3 class="font-bold text-base md:text-lg text-gray-800 mb-4 border-b pb-3 flex items-center gap-2">
+                    <i class="fas fa-info-circle text-ywka-blue text-xl"></i>
+                    <span>Detail dan Informasi Buku</span>
+                </h3>
+
+                <!-- Konten Informasi Buku -->
+                <div class="flex flex-col sm:flex-row gap-5">
+                    <!-- Kiri: Cover & QR Code -->
+                    <div class="w-full sm:w-1/3 flex flex-col items-center space-y-3">
+                        <div class="w-32 h-44 rounded-lg overflow-hidden shadow-md border bg-gray-100 flex items-center justify-center">
+                            <img v-if="selectedBuku.Gambar" :src="selectedBuku.Gambar" class="w-full h-full object-cover" :alt="selectedBuku.Judul">
+                            <div v-else class="text-gray-400 flex flex-col items-center">
+                                <i class="fas fa-book text-4xl mb-1"></i>
+                                <span class="text-[11px]">Tanpa Cover</span>
+                            </div>
+                        </div>
+                        
+                        <div class="border p-2 rounded-lg text-center w-32 bg-gray-50 shadow-sm">
+                            <img :src="selectedBuku.QRCode || ('https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=' + encodeURIComponent(selectedBuku.KodeBuku))" class="w-full mb-1 rounded" alt="QR Code">
+                            <p class="text-[10px] font-mono text-gray-600 font-bold truncate">{{ selectedBuku.KodeBuku }}</p>
+                        </div>
+                    </div>
+
+                    <!-- Kanan: Rincian Buku -->
+                    <div class="w-full sm:w-2/3 space-y-2">
+                        <div>
+                            <span class="text-[10px] uppercase tracking-wider font-extrabold text-blue-800 bg-blue-100 px-2 py-0.5 rounded">{{ selectedBuku.Kategori || 'Umum' }}</span>
+                            <h4 class="font-extrabold text-base md:text-lg leading-snug text-gray-800 mt-1">{{ selectedBuku.Judul }}</h4>
+                            <p class="text-xs text-gray-500 font-mono mt-0.5">
+                                <i class="fas fa-barcode mr-1 text-gray-400"></i>ID/ISBN: <span class="font-bold text-gray-700">{{ selectedBuku.KodeBuku }}</span>
+                            </p>
+                        </div>
+
+                        <div class="border-t border-gray-100 pt-2">
+                            <table class="w-full text-xs">
+                                <tbody>
+                                    <tr class="border-b border-dashed">
+                                        <td class="py-2 text-gray-500 w-28"><i class="fas fa-user-edit mr-1.5 text-gray-400"></i>Penulis</td>
+                                        <td class="py-2 font-semibold text-gray-800">{{ selectedBuku.Pengarang || '-' }}</td>
+                                    </tr>
+                                    <tr class="border-b border-dashed">
+                                        <td class="py-2 text-gray-500"><i class="fas fa-building mr-1.5 text-gray-400"></i>Penerbit</td>
+                                        <td class="py-2 font-semibold text-gray-800">{{ selectedBuku.Penerbit || '-' }} <span v-if="selectedBuku.Tahun">({{ selectedBuku.Tahun }})</span></td>
+                                    </tr>
+                                    <tr class="border-b border-dashed">
+                                        <td class="py-2 text-gray-500"><i class="fas fa-tags mr-1.5 text-gray-400"></i>Kategori</td>
+                                        <td class="py-2 font-semibold text-blue-700">{{ selectedBuku.Kategori || '-' }}</td>
+                                    </tr>
+                                    <tr class="border-b border-dashed">
+                                        <td class="py-2 text-gray-500"><i class="fas fa-map-marker-alt mr-1.5 text-ywka-orange"></i>Lokasi Rak</td>
+                                        <td class="py-2 font-bold text-gray-800"><span class="bg-orange-50 text-ywka-orange px-2 py-0.5 rounded border border-orange-200">{{ selectedBuku.Rak || '-' }}</span></td>
+                                    </tr>
+                                    <tr>
+                                        <td class="py-2 text-gray-500"><i class="fas fa-cubes mr-1.5 text-gray-400"></i>Ketersediaan</td>
+                                        <td class="py-2">
+                                            <span :class="selectedBuku.Stok > 0 ? 'bg-green-100 text-green-700 border-green-200' : 'bg-red-100 text-red-600 border-red-200'" class="border px-2.5 py-0.5 rounded-full text-[11px] font-bold inline-flex items-center gap-1">
+                                                <i class="fas" :class="selectedBuku.Stok > 0 ? 'fa-check-circle text-green-600' : 'fa-times-circle text-red-500'"></i>
+                                                {{ selectedBuku.Stok > 0 ? selectedBuku.Stok + ' Tersedia' : 'Stok Habis' }}
+                                            </span>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Footer Modal (Hanya tombol Tutup, tanpa cetak label & tanpa edit buku) -->
+                <div class="mt-5 flex justify-end border-t pt-3">
+                    <button @click="tutupModalDetail" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-lg text-xs md:text-sm font-bold transition-colors">
+                        <i class="fas fa-times mr-1"></i> Tutup
+                    </button>
+                </div>
+            </div>
+        </div>
 
         <!-- FOOTER -->
         <footer class="bg-white border-t text-center py-4 text-xs text-gray-500 mt-auto">
@@ -106,6 +198,8 @@
                 const loading = ref(true);
                 const searchQuery = ref('');
                 const filterKategori = ref('');
+                const showModalDetail = ref(false);
+                const selectedBuku = ref(null);
 
                 const fetchBukuKatalog = async () => {
                     loading.value = true;
@@ -114,8 +208,23 @@
                     loading.value = false;
                 }
 
+                const lihatDetailBuku = (buku) => {
+                    selectedBuku.value = buku;
+                    showModalDetail.value = true;
+                };
+
+                const tutupModalDetail = () => {
+                    showModalDetail.value = false;
+                    selectedBuku.value = null;
+                };
+
                 onMounted(() => {
                     fetchBukuKatalog();
+                    window.addEventListener('keydown', (e) => {
+                        if (e.key === 'Escape' && showModalDetail.value) {
+                            tutupModalDetail();
+                        }
+                    });
                 });
 
                 const daftarKategori = computed(() => {
@@ -135,7 +244,10 @@
                     });
                 });
 
-                return { dataBuku, loading, searchQuery, filterKategori, daftarKategori, filteredBuku };
+                return { 
+                    dataBuku, loading, searchQuery, filterKategori, daftarKategori, filteredBuku,
+                    showModalDetail, selectedBuku, lihatDetailBuku, tutupModalDetail
+                };
             }
         }).mount('#app');
     </script>
