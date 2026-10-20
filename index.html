@@ -61,11 +61,14 @@
                     <button @click="changeMenu('legacy')" :class="activeMenu === 'legacy' ? 'bg-ywka-green border-l-4 border-ywka-orange' : 'hover:bg-blue-800'" class="w-full flex items-center gap-3 px-4 py-3 text-left rounded transition-colors text-sm md:text-base"><i class="fas fa-file-excel w-5 text-center text-green-300"></i> <span>Data Legacy (Rekap)</span></button>
                     <button @click="changeMenu('pengaturan')" :class="activeMenu === 'pengaturan' ? 'bg-ywka-green border-l-4 border-ywka-orange' : 'hover:bg-blue-800'" class="w-full flex items-center gap-3 px-4 py-3 text-left rounded transition-colors mt-4 text-sm md:text-base"><i class="fas fa-cogs w-5 text-center"></i> <span>Pengaturan Sistem</span></button>
                     
-                    <!-- TOMBOL AKSES KATALOG PUBLIK -->
-                    <div class="pt-4 mt-4 border-t border-blue-800">
-                        <a href="katalog.html" target="_blank" class="w-full flex items-center gap-3 px-4 py-3 text-left rounded transition-colors bg-blue-900 hover:bg-ywka-orange text-white text-sm md:text-base border border-blue-700 border-dashed" title="Buka halaman Katalog Publik">
+                    <!-- TOMBOL AKSES KATALOG PUBLIK & CETAK FORM FISIK -->
+                    <div class="pt-4 mt-4 border-t border-blue-800 space-y-2">
+                        <a href="katalog.html" target="_blank" class="w-full flex items-center gap-3 px-4 py-2.5 text-left rounded transition-colors bg-blue-900 hover:bg-ywka-orange text-white text-xs md:text-sm border border-blue-700 border-dashed" title="Buka halaman Katalog Publik">
                             <i class="fas fa-external-link-alt w-5 text-center"></i> <span>Katalog Publik</span>
                         </a>
+                        <button @click="cetakFormKosongLandscape" class="w-full flex items-center gap-3 px-4 py-2.5 text-left rounded transition-all bg-emerald-700 hover:bg-emerald-600 text-white text-xs md:text-sm border border-emerald-500 shadow" title="Cetak Formulir Peminjaman Fisik Kosong (Landscape A4)">
+                            <i class="fas fa-print w-5 text-center text-yellow-300"></i> <span>Cetak Form Fisik</span>
+                        </button>
                     </div>
 
                     <div class="mt-8 border-t border-blue-800 pt-4 md:hidden"><button @click="logout" class="w-full text-sm text-red-300 hover:text-white transition-colors py-2"><i class="fas fa-sign-out-alt mr-1"></i> Keluar Sistem</button></div>
@@ -99,6 +102,10 @@
                                 <div class="flex flex-wrap items-center gap-2 w-full md:w-auto">
                                     <button @click="bukaForm('transaksi')" class="flex-1 bg-ywka-orange text-white px-3 py-1.5 rounded shadow font-bold hover:scale-105"><i class="fas fa-plus-circle mr-1"></i> Baru</button>
                                     
+                                    <button @click="cetakFormKosongLandscape" class="flex-1 bg-cyan-700 hover:bg-cyan-800 text-white px-3 py-1.5 rounded shadow font-bold text-xs flex items-center justify-center gap-1 transition-colors" title="Cetak Formulir Peminjaman Fisik Kosong (Landscape A4) untuk diisi manual">
+                                        <i class="fas fa-print mr-1"></i> Form Fisik
+                                    </button>
+
                                     <button @click="changeMenu('legacy')" class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5 rounded shadow font-bold transition-colors text-center" title="Buka Halaman Data Legacy Rekap Peminjaman">
                                         <i class="fas fa-file-excel mr-1"></i> Rekap Legacy
                                     </button>
@@ -230,6 +237,10 @@
                                 </p>
                             </div>
                             <div class="flex flex-wrap items-center gap-3 w-full md:w-auto">
+                                <button @click="cetakFormKosongLandscape" class="bg-ywka-green hover:bg-green-700 text-white px-4 py-2.5 rounded-xl font-bold text-xs md:text-sm flex items-center justify-center gap-2 transition-all shadow-lg hover:scale-105" title="Cetak Formulir Fisik Kosong (Landscape A4) persis format logbook manual">
+                                    <i class="fas fa-print text-base"></i>
+                                    <span>Cetak Form Kosong (Landscape)</span>
+                                </button>
                                 <label class="flex-1 md:flex-initial bg-ywka-orange hover:bg-orange-600 text-white px-4 py-2.5 rounded-xl shadow-lg font-bold text-xs md:text-sm cursor-pointer flex items-center justify-center gap-2 transition-transform hover:scale-105">
                                     <i class="fas fa-file-excel text-base"></i>
                                     <span>Upload Rekap Excel</span>
@@ -274,9 +285,13 @@
                                     </select>
                                 </div>
                                 <div class="flex flex-wrap items-center gap-2 w-full md:w-auto">
-                                    <button @click="downloadLaporanLegacyPDF" class="bg-ywka-green hover:bg-green-700 text-white px-3.5 py-1.5 rounded shadow text-xs font-bold flex items-center gap-1.5 transition-colors">
+                                    <button @click="cetakFormKosongLandscape" class="bg-blue-600 hover:bg-blue-700 text-white px-3.5 py-1.5 rounded shadow text-xs font-bold flex items-center gap-1.5 transition-colors" title="Cetak formulir fisik kosong (Landscape A4) jika lembaran manual di meja sudah penuh">
+                                        <i class="fas fa-print"></i>
+                                        <span>Cetak Form Kosong</span>
+                                    </button>
+                                    <button @click="downloadLaporanLegacyPDF" class="bg-ywka-green hover:bg-green-700 text-white px-3.5 py-1.5 rounded shadow text-xs font-bold flex items-center gap-1.5 transition-colors" title="Cetak Laporan Rekap Data Legacy (Landscape)">
                                         <i class="fas fa-file-pdf"></i>
-                                        <span>Cetak PDF</span>
+                                        <span>Cetak Rekap PDF</span>
                                     </button>
                                     <button @click="hapusSemuaLegacy" class="text-red-600 hover:bg-red-50 border border-red-200 px-3 py-1.5 rounded text-xs font-bold flex items-center gap-1.5 transition-colors" title="Hapus semua arsip legacy">
                                         <i class="fas fa-trash-alt"></i>
@@ -1093,6 +1108,152 @@
                 const funcPrint = (htmlBody, title) => { const win = window.open('', '_blank'); win.document.write(`<!DOCTYPE html><html><head><title>${title}</title><style>@media print { @page { margin: 0; } body{margin:0;padding-top:20px;font-family:Arial;} } body{font-family:Arial;} table{width:100%;border-collapse:collapse;margin-top:10px;font-size:11px} th{background:#071a9e;color:white;padding:8px;border:1px solid #000} td{padding:6px;border:1px solid #000}</style></head><body>${htmlBody}<script>setTimeout(()=>window.print(), 500);<\/script></body></html>`); win.document.close(); }
                 const getKop = () => formPengaturan.value.KopSurat ? `<img src="${formPengaturan.value.KopSurat}" style="width:100%;display:block;margin:0;">` : `<h2 style="text-align:center">SMA YWKA BANDUNG</h2><hr style="border:1px solid #000">`;
                 const getTTD = () => `<div style="width:300px;float:right;text-align:center;margin-top:30px;font-size:11px"><p>Bandung, ${new Date().toLocaleDateString('id-ID')}<br>Kepala Perpustakaan,</p><br><br><br><p style="font-weight:bold;text-decoration:underline;margin-bottom:2px">${formPengaturan.value.KepalaPerpus}</p><p style="margin-top:0">NIP/NIK. ${formPengaturan.value.NIP}</p></div>`;
+
+                const funcPrintLandscape = (htmlBody, title) => {
+                    const win = window.open('', '_blank');
+                    if (!win) {
+                        alert("Pop-up browser terblokir. Harap izinkan pop-up di browser Anda untuk mencetak formulir.");
+                        return;
+                    }
+                    win.document.write(`<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <title>${title || 'Cetak Form Peminjaman Perpustakaan'}</title>
+    <style>
+        @page {
+            size: A4 landscape;
+            margin: 6mm 10mm 6mm 10mm;
+        }
+        * {
+            box-sizing: border-box;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+        }
+        body {
+            font-family: Arial, Helvetica, sans-serif;
+            margin: 0;
+            padding: 2px 4px;
+            color: #000;
+            background: #fff;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th, td {
+            border: 1px solid #000;
+        }
+        @media print {
+            body {
+                padding: 0;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
+        }
+    </style>
+</head>
+<body>
+    ${htmlBody}
+    <script>
+        window.addEventListener('load', () => {
+            setTimeout(() => {
+                window.focus();
+                window.print();
+            }, 300);
+        });
+    <\/script>
+</body>
+</html>`);
+                    win.document.close();
+                };
+
+                const getKopLandscape = () => {
+                    const logoUrl = new URL('logo.png', window.location.href).href;
+                    return `
+                    <div style="display: flex; align-items: center; justify-content: center; gap: 20px; padding-bottom: 2px;">
+                        <div style="flex-shrink: 0;">
+                            <img src="${logoUrl}" alt="Logo YWKA" style="height: 68px; width: auto; object-fit: contain;">
+                        </div>
+                        <div style="text-align: center;">
+                            <div style="font-size: 14.5px; font-weight: bold; letter-spacing: 0.5px; color: #111; margin-bottom: 1px;">YAYASAN WANITA KERETA API</div>
+                            <div style="font-size: 21px; font-weight: 900; letter-spacing: 1px; color: #000; margin-bottom: 1px;">SMA YWKA BANDUNG</div>
+                            <div style="font-style: italic; font-size: 13px; font-weight: 600; font-family: 'Brush Script MT', 'Lucida Handwriting', 'Segoe Script', 'Georgia', cursive; color: #222; margin-bottom: 1px;">Character &amp; Achievement</div>
+                            <div style="font-size: 11px; font-weight: bold; letter-spacing: 0.5px; color: #000; margin-bottom: 1px;">TERAKREDITASI "A"</div>
+                            <div style="font-size: 9.5px; color: #333; letter-spacing: 0.3px;">JALAN ELANG II NO.3 TELEPON. 022 - 6019414 BANDUNG 40184</div>
+                        </div>
+                    </div>
+                    <div style="border-top: 2.5px solid #000; border-bottom: 1px solid #000; height: 2px; margin: 4px 0 8px 0;"></div>
+                    `;
+                };
+
+                const cetakFormKosongLandscape = (jumlah) => {
+                    const baris = (typeof jumlah === 'number' && jumlah > 0) ? jumlah : 12;
+                    let tableRows = '';
+                    for (let i = 1; i <= baris; i++) {
+                        tableRows += `
+                        <tr style="height: 29px;">
+                            <td style="text-align: center; font-weight: bold; font-size: 11px;">${i}</td>
+                            <td></td>
+                            <td></td>
+                            <td></td>
+                            <td></td>
+                            <td></td>
+                            <td></td>
+                            <td></td>
+                            <td></td>
+                        </tr>`;
+                    }
+
+                    const html = `
+                    <div style="width: 100%; max-width: 1050px; margin: 0 auto;">
+                        ${getKopLandscape()}
+                        <div style="text-align: center; margin-bottom: 8px;">
+                            <div style="font-size: 13px; font-weight: 900; letter-spacing: 0.8px; text-transform: uppercase;">DAFTAR PEMINJAMAN BUKU PERPUSTAKAAN</div>
+                            <div style="font-size: 12px; font-weight: 800; letter-spacing: 0.5px; text-transform: uppercase; margin-top: 2px;">SMA YWKA BANDUNG</div>
+                        </div>
+                        <table style="width: 100%; border-collapse: collapse; font-size: 10.5px;">
+                            <thead>
+                                <tr style="background-color: #cde0ee !important; color: #000; text-align: center; font-weight: 900; -webkit-print-color-adjust: exact; print-color-adjust: exact; height: 27px;">
+                                    <th style="width: 4%; padding: 4px 2px;">NO.</th>
+                                    <th style="width: 9%; padding: 4px 4px;">TANGGAL</th>
+                                    <th style="width: 19%; padding: 4px 6px;">NAMA LENGKAP PEMINJAM</th>
+                                    <th style="width: 6.5%; padding: 4px 2px;">KELAS</th>
+                                    <th style="width: 25.5%; padding: 4px 6px;">BUKU YANG DIPINJAM</th>
+                                    <th style="width: 12%; padding: 4px 4px;">WAKTU PEMINJAMAN</th>
+                                    <th style="width: 12%; padding: 4px 4px;">WAKTU PENGEMBALIAN</th>
+                                    <th style="width: 12%; padding: 4px 4px;">KONTAK PEMINJAM</th>
+                                    <th style="width: 5%; padding: 4px 2px;">KET.</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${tableRows}
+                            </tbody>
+                        </table>
+                        <div style="margin-top: 12px; display: flex; justify-content: space-between; align-items: flex-start; font-size: 10.5px;">
+                            <div style="width: 55%; color: #333; line-height: 1.4;">
+                                <p style="margin: 0; font-weight: bold; color: #000;">Petunjuk Pengisian:</p>
+                                <ol style="margin: 2px 0 0 16px; padding: 0;">
+                                    <li>Peminjam wajib mengisi data formulir secara lengkap dan jelas menggunakan pulpen.</li>
+                                    <li>Kolom <b>KET.</b> diisi tanda tangan / paraf peminjam saat buku dipinjam &amp; dikembalikan.</li>
+                                    <li>Waktu peminjaman buku maksimal 3 hari kerja atau sesuai ketentuan perpustakaan.</li>
+                                </ol>
+                            </div>
+                            <div style="width: 35%; text-align: center;">
+                                <p style="margin: 0;">Bandung, ............................................ 20....</p>
+                                <p style="margin: 2px 0 0 0; font-weight: bold;">Petugas Perpustakaan SMA YWKA,</p>
+                                <div style="height: 44px;"></div>
+                                <p style="margin: 0; font-weight: bold; text-decoration: underline;">( ${formPengaturan.value.KepalaPerpus || '................................................'} )</p>
+                                <p style="margin: 2px 0 0 0; font-size: 9.5px;">NIP/NIK. ${formPengaturan.value.NIP || '.........................................'}</p>
+                            </div>
+                        </div>
+                    </div>
+                    `;
+
+                    funcPrintLandscape(html, "Form Peminjaman Buku Perpustakaan SMA YWKA (Landscape)");
+                };
                 
                 const formatExcelDate = (val) => {
                     if (!val) return '-';
@@ -1328,18 +1489,61 @@
                 const downloadLaporanLegacyPDF = () => {
                     let rows = '';
                     filteredLegacy.value.forEach((t, i) => {
-                        rows += `<tr>
-                            <td style="text-align:center">${i+1}</td>
-                            <td>${t.TglPinjam || '-'}</td>
-                            <td style="font-weight:bold">${getNamaSiswa(t)}</td>
-                            <td style="text-align:center">${getKelas(t)}</td>
-                            <td>${t.Buku || '-'}</td>
-                            <td style="text-align:center">${t.TglKembali || '-'}</td>
-                            <td style="text-align:center">${getKontak(t)}</td>
-                            <td style="text-align:center;font-weight:bold">${isStatusKembali(t) ? 'Sudah Kembali' : 'Belum Kembali'}</td>
+                        rows += `<tr style="height: 25px;">
+                            <td style="text-align:center; font-weight: bold;">${i+1}</td>
+                            <td style="text-align:center;">${t.TglPinjam || '-'}</td>
+                            <td style="font-weight:bold; padding: 0 4px;">${getNamaSiswa(t)}</td>
+                            <td style="text-align:center;">${getKelas(t)}</td>
+                            <td style="padding: 0 4px;">${t.Buku || '-'}</td>
+                            <td style="text-align:center;">${t.TglPinjam || '-'}</td>
+                            <td style="text-align:center;">${t.TglKembali || '-'}</td>
+                            <td style="text-align:center;">${getKontak(t)}</td>
+                            <td style="text-align:center; font-weight:bold;">${isStatusKembali(t) ? '✓' : '-'}</td>
                         </tr>`;
                     });
-                    funcPrint(`${getKop()}<div style="padding:10px 40px"><h4 style="text-align:center">DAFTAR PEMINJAMAN BUKU PERPUSTAKAAN (DATA REKAP LEGACY)</h4><table><thead><tr><th>NO</th><th>WAKTU PINJAM</th><th>NAMA LENGKAP PEMINJAM</th><th>KELAS</th><th>BUKU YANG DIPINJAM</th><th>WAKTU PENGEMBALIAN</th><th>KONTAK PEMINJAM</th><th>KETERANGAN</th></tr></thead><tbody>${rows||'<tr><td colspan="8" style="text-align:center">Kosong</td></tr>'}</tbody></table>${getTTD()}</div>`, "Laporan Legacy Transaksi");
+
+                    const html = `
+                    <div style="width: 100%; max-width: 1050px; margin: 0 auto;">
+                        ${getKopLandscape()}
+                        <div style="text-align: center; margin-bottom: 8px;">
+                            <div style="font-size: 13px; font-weight: 900; letter-spacing: 0.8px; text-transform: uppercase;">DAFTAR PEMINJAMAN BUKU PERPUSTAKAAN (DATA REKAP LEGACY)</div>
+                            <div style="font-size: 12px; font-weight: 800; letter-spacing: 0.5px; text-transform: uppercase; margin-top: 2px;">SMA YWKA BANDUNG</div>
+                        </div>
+                        <table style="width: 100%; border-collapse: collapse; font-size: 10.5px;">
+                            <thead>
+                                <tr style="background-color: #cde0ee !important; color: #000; text-align: center; font-weight: 900; -webkit-print-color-adjust: exact; print-color-adjust: exact; height: 27px;">
+                                    <th style="width: 4%; padding: 4px 2px;">NO.</th>
+                                    <th style="width: 9%; padding: 4px 4px;">TANGGAL</th>
+                                    <th style="width: 19%; padding: 4px 6px;">NAMA LENGKAP PEMINJAM</th>
+                                    <th style="width: 6.5%; padding: 4px 2px;">KELAS</th>
+                                    <th style="width: 25.5%; padding: 4px 6px;">BUKU YANG DIPINJAM</th>
+                                    <th style="width: 12%; padding: 4px 4px;">WAKTU PEMINJAMAN</th>
+                                    <th style="width: 12%; padding: 4px 4px;">WAKTU PENGEMBALIAN</th>
+                                    <th style="width: 12%; padding: 4px 4px;">KONTAK PEMINJAM</th>
+                                    <th style="width: 5%; padding: 4px 2px;">KET.</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${rows || '<tr><td colspan="9" style="text-align:center; padding: 20px;">Tidak ada data peminjaman legacy</td></tr>'}
+                            </tbody>
+                        </table>
+                        <div style="margin-top: 14px; display: flex; justify-content: space-between; align-items: flex-start; font-size: 10.5px;">
+                            <div style="width: 55%; color: #333; line-height: 1.4;">
+                                <p style="margin: 0; font-weight: bold; color: #000;">Rekapitulasi Data:</p>
+                                <p style="margin: 2px 0 0 0;">Total: <b>${filteredLegacy.value.length}</b> transaksi &nbsp;|&nbsp; Sudah Kembali: <b>${filteredLegacy.value.filter(t => isStatusKembali(t)).length}</b> &nbsp;|&nbsp; Belum Kembali: <b>${filteredLegacy.value.filter(t => !isStatusKembali(t)).length}</b></p>
+                            </div>
+                            <div style="width: 35%; text-align: center;">
+                                <p style="margin: 0;">Bandung, ${new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
+                                <p style="margin: 2px 0 0 0; font-weight: bold;">Kepala Perpustakaan SMA YWKA,</p>
+                                <div style="height: 44px;"></div>
+                                <p style="margin: 0; font-weight: bold; text-decoration: underline;">( ${formPengaturan.value.KepalaPerpus || '................................................'} )</p>
+                                <p style="margin: 2px 0 0 0; font-size: 9.5px;">NIP/NIK. ${formPengaturan.value.NIP || '.........................................'}</p>
+                            </div>
+                        </div>
+                    </div>
+                    `;
+
+                    funcPrintLandscape(html, "Laporan Rekap Peminjaman Buku Legacy (Landscape)");
                 };
 
                 const downloadLaporanBukuPDF = () => {
@@ -1394,7 +1598,8 @@
                     dataLegacy, filteredLegacy, filterStatusLegacy, previewLegacyData, previewLegacyInfo,
                     prosesUploadExcelLegacy, eksekusiSimpanLegacy, unduhFormatExcelLegacy, hapusSemuaLegacy,
                     downloadLaporanLegacyPDF, searchSiswaDropdown, searchBukuDropdown, filteredSiswaDropdown, filteredBukuDropdown,
-                    getNamaSiswa, getKelas, getKontak, isStatusKembali
+                    getNamaSiswa, getKelas, getKontak, isStatusKembali,
+                    cetakFormKosongLandscape, funcPrintLandscape
                 }
             }
         }).mount('#app')
