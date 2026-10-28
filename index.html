@@ -930,9 +930,20 @@
                         (!filterBulan.value || (t.TglPinjam && t.TglPinjam.includes(filterBulan.value)) || (t.TglKembali && t.TglKembali.includes(filterBulan.value)))
                     );
                 });
-                const daftarKategori = computed(() => { const k = new Set(); dataBuku.value.forEach(b => k.add(b.Kategori)); return Array.from(k).sort(); });
-                const daftarRak = computed(() => { const r = new Set(); dataBuku.value.forEach(b => r.add(b.Rak)); return Array.from(r).sort(); });
-                const filteredBuku = computed(() => dataBuku.value.filter(b => (!filterKategoriBuku.value || b.Kategori === filterKategoriBuku.value) && (!filterRakBuku.value || b.Rak === filterRakBuku.value) && (!searchQuery.value || b.Judul.toLowerCase().includes(searchQuery.value.toLowerCase()) || b.KodeBuku.toLowerCase().includes(searchQuery.value.toLowerCase()))));
+                const daftarKategori = computed(() => {
+                    const k = new Set();
+                    dataBuku.value.forEach(b => {
+                        if (b.Kategori) {
+                            b.Kategori.split(',').forEach(p => {
+                                const t = p.trim();
+                                if (t) k.add(t);
+                            });
+                        }
+                    });
+                    return Array.from(k).sort();
+                });
+                const daftarRak = computed(() => { const r = new Set(); dataBuku.value.forEach(b => { if(b.Rak) r.add(b.Rak); }); return Array.from(r).sort(); });
+                const filteredBuku = computed(() => dataBuku.value.filter(b => (!filterKategoriBuku.value || (b.Kategori && b.Kategori.toLowerCase().includes(filterKategoriBuku.value.toLowerCase()))) && (!filterRakBuku.value || b.Rak === filterRakBuku.value) && (!searchQuery.value || b.Judul.toLowerCase().includes(searchQuery.value.toLowerCase()) || b.KodeBuku.toLowerCase().includes(searchQuery.value.toLowerCase()) || (b.Penerbit && b.Penerbit.toLowerCase().includes(searchQuery.value.toLowerCase())))));
                 const filteredSiswa = computed(() => dataSiswa.value.filter(s => !searchQuery.value || s.Nama.toLowerCase().includes(searchQuery.value.toLowerCase()) || s.NIS.toLowerCase().includes(searchQuery.value.toLowerCase())));
 
                 const menuTitle = computed(() => {
