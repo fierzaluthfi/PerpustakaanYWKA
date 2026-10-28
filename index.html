@@ -216,6 +216,7 @@
                                         <tr v-if="filteredTransaksi.length === 0"><td colspan="6" class="text-center py-8 text-gray-500">Buku catatan kosong.</td></tr>
                                     </tbody>
                                 </table>
+                            </div>
                         </div>
                     </div>
 
@@ -264,11 +265,9 @@
                                         <td class="px-4 py-2 text-center font-bold">{{ buku.Rak }}</td>
                                         <td class="px-4 py-2 text-center"><span :class="buku.Stok <= 0 ? 'bg-red-500' : 'bg-ywka-green'" class="text-white px-2 py-1 rounded-full shadow-sm">{{ buku.Stok }}</span></td>
                                         <td class="px-4 py-2 text-center">
-                                            <td class="px-4 py-2 text-center">
                                             <button @click="cetakLabelBuku(buku)" class="bg-gray-800 text-white p-1.5 rounded mr-1 hover:bg-gray-700" title="Cetak QR"><i class="fas fa-print"></i></button>
                                             <button @click="editBuku(buku)" class="text-blue-500 bg-blue-50 p-1.5 rounded mr-1 hover:bg-blue-100" title="Edit"><i class="fas fa-edit"></i></button>
                                             <button @click="hapusData('buku', 'KodeBuku', buku.KodeBuku)" class="text-red-500 bg-red-50 p-1.5 rounded hover:bg-red-100" title="Hapus"><i class="fas fa-trash"></i></button>
-                                        </td>
                                         </td>
                                     </tr>
                                     <tr v-if="filteredBuku.length === 0"><td colspan="7" class="text-center py-8 text-gray-500">Buku catatan kosong.</td></tr>
