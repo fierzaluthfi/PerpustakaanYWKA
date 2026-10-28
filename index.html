@@ -8,6 +8,7 @@
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <script src="sinopsis-data.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         .bg-ywka-blue { background-color: #071a9e; }
@@ -378,6 +379,35 @@
                             </div>
                         </div>
                         <div class="text-right"><button @click="simpanPengaturan" class="bg-gray-800 text-white px-8 py-3 rounded-lg shadow-lg font-bold"><i class="fas fa-save mr-2"></i> Simpan Pengaturan</button></div>
+
+                        <!-- KARTU SINKRONISASI SINOPSIS OTOMATIS -->
+                        <div class="bg-white rounded-xl shadow border-t-4 border-emerald-600 p-6 space-y-4 mt-6">
+                            <div class="flex items-center justify-between border-b pb-3">
+                                <div>
+                                    <h3 class="font-bold text-gray-800 text-base flex items-center gap-2">
+                                        <i class="fas fa-magic text-emerald-600"></i>
+                                        <span>Fitur Sinopsis Otomatis Buku</span>
+                                    </h3>
+                                    <p class="text-xs text-gray-500 mt-0.5">Kelola dan sinkronkan sinopsis ringkasan cerita untuk katalog buku secara otomatis tanpa copy-paste satu-satu</p>
+                                </div>
+                                <span class="bg-emerald-100 text-emerald-800 font-bold text-xs px-3 py-1 rounded-full">Aktif Otomatis</span>
+                            </div>
+                            
+                            <div class="bg-emerald-50/70 border border-emerald-200 rounded-lg p-3.5 text-xs text-emerald-950 space-y-2 leading-relaxed">
+                                <p><i class="fas fa-check-circle text-emerald-600 mr-1.5"></i><b>Sinopsis Otomatis Aktif:</b> Seluruh <b>{{ dataBuku.length }} buku</b> di katalog publik saat ini sudah memiliki sinopsis otomatis terintegrasi langsung saat pengunjung mengklik detail buku.</p>
+                                <p><i class="fas fa-info-circle text-blue-600 mr-1.5"></i>Jika ingin menyimpan sinopsis langsung ke database Supabase agar permanen di server, pastikan kolom <code class="bg-white px-1.5 py-0.5 rounded border font-mono">Sinopsis</code> sudah ditambahkan di tabel <code class="bg-white px-1.5 py-0.5 rounded border font-mono">buku</code>.</p>
+                            </div>
+
+                            <div class="flex flex-wrap items-center justify-between gap-3 pt-1">
+                                <div class="text-xs text-gray-600">
+                                    SQL Query Supabase: <code class="bg-gray-100 text-indigo-700 px-2 py-1 rounded font-mono text-[11px] border select-all">ALTER TABLE buku ADD COLUMN IF NOT EXISTS "Sinopsis" TEXT;</code>
+                                </div>
+                                <button type="button" @click="sinkronisasiSinopsisSupabase" :disabled="loading" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg text-xs font-bold transition-all shadow flex items-center gap-2 disabled:opacity-50">
+                                    <i class="fas" :class="loading ? 'fa-spinner fa-spin' : 'fa-sync-alt'"></i>
+                                    <span>Sinkronkan Sinopsis ke Database</span>
+                                </button>
+                            </div>
+                        </div>
                         <div class="bg-white rounded-xl shadow mt-8 p-4">
                             <div class="flex justify-between items-center mb-4"><h3 class="font-bold"><i class="fas fa-user-shield"></i> Akun Petugas</h3><button @click="bukaFormUser()" class="bg-ywka-green text-white px-3 py-1.5 rounded text-sm font-bold">Tambah</button></div>
                             <table class="w-full text-left text-sm"><thead class="bg-gray-100"><tr><th class="px-4 py-2">Nama</th><th class="px-4 py-2">Email</th><th class="px-4 py-2">Hak Akses</th><th class="px-4 py-2">Aksi</th></tr></thead><tbody><tr v-for="u in dataUsers" class="border-b"><td class="px-4 py-2 font-bold">{{ u.nama }}</td><td class="px-4 py-2">{{ u.email }}</td><td class="px-4 py-2">{{ u.role }}</td><td class="px-4 py-2"><button @click="hapusData('users', 'email', u.email)" class="text-red-500 font-bold">Hapus</button></td></tr></tbody></table>
@@ -388,7 +418,7 @@
 
             <!-- AREA MODAL FORM POPUP -->
             <div v-if="showModal" class="absolute inset-0 bg-black bg-opacity-60 flex justify-center items-center z-50 p-4">
-                <div class="bg-white rounded-xl shadow-2xl p-5 w-full max-w-lg border-t-8 border-ywka-blue relative max-h-[90vh] overflow-y-auto">
+                <div class="bg-white rounded-xl shadow-2xl p-5 w-full max-w-xl border-t-8 border-ywka-blue relative max-h-[90vh] overflow-y-auto">
                     <button @click="showModal = false" class="absolute top-4 right-4 text-gray-400 text-2xl hover:text-gray-600 z-10"><i class="fas fa-times"></i></button>
                     
                     <!-- Pop-up Detail Buku -->
@@ -421,6 +451,23 @@
                                 </table>
                             </div>
                         </div>
+
+                        <!-- Sinopsis Buku -->
+                        <div class="mt-4 pt-3.5 border-t border-gray-100">
+                            <div class="flex items-center justify-between mb-2">
+                                <h5 class="text-xs font-bold text-gray-800 flex items-center gap-1.5">
+                                    <i class="fas fa-book-open text-ywka-orange"></i>
+                                    <span>Sinopsis Buku</span>
+                                </h5>
+                                <span class="text-[10px] text-blue-700 font-semibold bg-blue-50 px-2.5 py-0.5 rounded-full border border-blue-100 flex items-center gap-1">
+                                    <i class="fas fa-magic text-amber-500"></i> Ringkasan Cerita
+                                </span>
+                            </div>
+                            <div class="bg-slate-50 hover:bg-slate-50/90 p-3.5 rounded-xl border border-slate-200/80 text-xs text-gray-700 leading-relaxed shadow-inner max-h-36 overflow-y-auto">
+                                <p class="text-gray-700 font-normal leading-relaxed text-justify">{{ getSinopsis(selectedBuku) }}</p>
+                            </div>
+                        </div>
+
                         <div class="mt-6 flex gap-2 justify-end border-t pt-4">
                             <button @click="cetakLabelBuku(selectedBuku)" class="bg-gray-800 text-white px-4 py-2 rounded text-sm font-bold shadow hover:bg-gray-700"><i class="fas fa-print mr-2"></i> Cetak Label</button>
                             <button @click="editBuku(selectedBuku)" class="bg-blue-500 text-white px-4 py-2 rounded text-sm font-bold shadow hover:bg-blue-600"><i class="fas fa-edit mr-2"></i> Edit Buku</button>
@@ -435,6 +482,18 @@
                         <div><label class="text-xs font-bold">Pengarang</label><input type="text" v-model="formBuku.pengarang" required class="w-full border rounded p-2"></div>
                         <div class="grid grid-cols-2 gap-3"><div><label class="text-xs font-bold">Penerbit</label><input type="text" v-model="formBuku.penerbit" required class="w-full border rounded p-2"></div><div><label class="text-xs font-bold">Tahun</label><input type="number" v-model="formBuku.tahun" required class="w-full border rounded p-2"></div></div>
                         <div class="grid grid-cols-2 gap-3"><div><label class="text-xs font-bold">Rak</label><input type="text" v-model="formBuku.rak" required class="w-full border rounded p-2"></div><div><label class="text-xs font-bold">Stok</label><input type="number" v-model="formBuku.stok" required class="w-full border rounded p-2"></div></div>
+                        
+                        <!-- Input Sinopsis dengan Tombol AI / Auto-Generate -->
+                        <div>
+                            <div class="flex justify-between items-center mb-1">
+                                <label class="text-xs font-bold text-gray-700">Sinopsis Buku</label>
+                                <button type="button" @click="autoGenerateSinopsis" class="text-[11px] text-white bg-ywka-orange hover:bg-orange-600 px-2.5 py-0.5 rounded font-bold shadow-sm transition-colors flex items-center gap-1" title="Buat sinopsis otomatis dengan AI / Metadata">
+                                    <i class="fas fa-magic"></i> Buat Sinopsis Otomatis
+                                </button>
+                            </div>
+                            <textarea v-model="formBuku.sinopsis" rows="3" placeholder="Sinopsis atau ringkasan cerita buku (klik tombol 'Buat Sinopsis Otomatis' agar terisi otomatis)..." class="w-full border rounded p-2 text-xs text-gray-700 focus:outline-none focus:ring-1 focus:ring-ywka-blue"></textarea>
+                        </div>
+
                         <div class="border p-2 bg-gray-50 rounded"><label class="text-xs font-bold block mb-1">Kamera / File Cover</label><input type="file" @change="e => prosesUploadStorage(e, 'buku')" accept="image/*" class="text-xs"><div v-if="formBuku.Gambar" class="mt-2 text-xs text-green-600 font-bold"><i class="fas fa-check"></i> Foto siap</div></div>
                         <button type="submit" class="w-full bg-ywka-blue text-white py-2 rounded font-bold mt-2">Simpan</button>
                     </form>
@@ -649,7 +708,7 @@
                 const formPengaturan = ref({ LamaPinjam: 3, DendaPerHari: 5000, KepalaPerpus: '', NIP: '', KopSurat: '' });
                 const showModal = ref(false); const modalType = ref('buku'); const isEditMode = ref(false); const selectedBuku = ref(null);
                 
-                const formBuku = ref({ kode: '', judul: '', pengarang: '', penerbit: '', tahun: '', kategori: '', rak: '', stok: 1, Gambar: '', file: null }); 
+                const formBuku = ref({ kode: '', judul: '', pengarang: '', penerbit: '', tahun: '', kategori: '', rak: '', stok: 1, Gambar: '', sinopsis: '', file: null }); 
                 // TAMBAHAN UNTUK EDIT MASSAL
                 const selectedBukuIds = ref([]);
                 const formBulkRak = ref('');
@@ -928,10 +987,37 @@
                 
                 const simpanBuku = async () => {
                     loading.value = true;
-                    if(formBuku.value.file) { formBuku.value.Gambar = await uploadBerkas(formBuku.value.file, 'buku'); }
-                    const qrUrl = "https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=" + encodeURIComponent(formBuku.value.kode);
-                    const p = { KodeBuku: formBuku.value.kode, Judul: formBuku.value.judul, Pengarang: formBuku.value.pengarang, Penerbit: formBuku.value.penerbit, Tahun: formBuku.value.tahun, Kategori: formBuku.value.kategori, Rak: formBuku.value.rak, Stok: formBuku.value.stok, QRCode: qrUrl, Gambar: formBuku.value.Gambar!=='pending'?formBuku.value.Gambar:'' };
-                    await supaClient.from('buku').upsert(p); await fetchSemuaData();
+                    try {
+                        if(formBuku.value.file) { formBuku.value.Gambar = await uploadBerkas(formBuku.value.file, 'buku'); }
+                        const qrUrl = "https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=" + encodeURIComponent(formBuku.value.kode);
+                        const p = { 
+                            KodeBuku: formBuku.value.kode, 
+                            Judul: formBuku.value.judul, 
+                            Pengarang: formBuku.value.pengarang, 
+                            Penerbit: formBuku.value.penerbit, 
+                            Tahun: formBuku.value.tahun, 
+                            Kategori: formBuku.value.kategori, 
+                            Rak: formBuku.value.rak, 
+                            Stok: formBuku.value.stok, 
+                            QRCode: qrUrl, 
+                            Gambar: formBuku.value.Gambar!=='pending'?formBuku.value.Gambar:'',
+                            Sinopsis: formBuku.value.sinopsis || ''
+                        };
+                        let { error } = await supaClient.from('buku').upsert(p);
+                        if (error && error.message && error.message.toLowerCase().includes('sinopsis')) {
+                            delete p.Sinopsis;
+                            const resRetry = await supaClient.from('buku').upsert(p);
+                            error = resRetry.error;
+                        }
+                        if (error) throw error;
+                        await fetchSemuaData();
+                        showModal.value = false;
+                        alert("Data buku berhasil disimpan!");
+                    } catch (e) {
+                        console.error("Gagal simpan buku:", e);
+                        alert("Gagal menyimpan buku: " + (e.message || ''));
+                    }
+                    loading.value = false;
                 }
                 
                 const simpanSiswa = async () => {
@@ -1562,7 +1648,7 @@
                     modalType.value = tipe; 
                     showModal.value = true; 
                     isEditMode.value = false; 
-                    if(tipe === 'buku') formBuku.value = { kode: '', judul: '', pengarang: '', penerbit: '', tahun: '', kategori: '', rak: '', stok: 1, Gambar: '', file: null }; 
+                    if(tipe === 'buku') formBuku.value = { kode: '', judul: '', pengarang: '', penerbit: '', tahun: '', kategori: '', rak: '', stok: 1, Gambar: '', sinopsis: '', file: null }; 
                     if(tipe === 'siswa') formSiswa.value = { nis: '', nama: '', kelas: '', nohp: '', status: 'Aktif', Foto: '', file: null }; 
                     if(tipe === 'transaksi') {
                         searchSiswaDropdown.value = '';
@@ -1580,9 +1666,85 @@
                         }; 
                     }
                 }
-                const editBuku = (buku) => { modalType.value = 'buku'; isEditMode.value = true; formBuku.value = { kode: buku.KodeBuku, judul: buku.Judul, pengarang: buku.Pengarang, penerbit: buku.Penerbit, tahun: buku.Tahun, kategori: buku.Kategori, rak: buku.Rak, stok: parseInt(buku.Stok) || 0, Gambar: buku.Gambar, file: null }; showModal.value = true; }
+                const editBuku = (buku) => { 
+                    modalType.value = 'buku'; 
+                    isEditMode.value = true; 
+                    formBuku.value = { 
+                        kode: buku.KodeBuku, 
+                        judul: buku.Judul, 
+                        pengarang: buku.Pengarang, 
+                        penerbit: buku.Penerbit, 
+                        tahun: buku.Tahun, 
+                        kategori: buku.Kategori, 
+                        rak: buku.Rak, 
+                        stok: parseInt(buku.Stok) || 0, 
+                        Gambar: buku.Gambar, 
+                        sinopsis: buku.Sinopsis || (window.PerpusSinopsis ? window.PerpusSinopsis.getSinopsis(buku) : ''),
+                        file: null 
+                    }; 
+                    showModal.value = true; 
+                }
                 const editSiswa = (siswa) => { modalType.value = 'siswa'; isEditMode.value = true; formSiswa.value = { nis: siswa.NIS, nama: siswa.Nama, kelas: siswa.Kelas, nohp: siswa.NoHP || '', status: siswa.Status, Foto: siswa.Foto, file: null }; showModal.value = true; }
                 const bukaFormUser = () => { modalType.value = 'user'; showModal.value = true; formUser.value = { email: '', password: '', nama: '', role: 'Petugas' }; }
+
+                const getSinopsis = (buku) => {
+                    if (!buku) return '';
+                    if (window.PerpusSinopsis && typeof window.PerpusSinopsis.getSinopsis === 'function') {
+                        return window.PerpusSinopsis.getSinopsis(buku);
+                    }
+                    return buku.Sinopsis || 'Sinopsis belum tersedia.';
+                };
+
+                const autoGenerateSinopsis = () => {
+                    if (!formBuku.value.judul) {
+                        alert("Harap masukkan Judul Buku terlebih dahulu!");
+                        return;
+                    }
+                    if (window.PerpusSinopsis) {
+                        const dummy = {
+                            KodeBuku: formBuku.value.kode,
+                            Judul: formBuku.value.judul,
+                            Pengarang: formBuku.value.pengarang,
+                            Penerbit: formBuku.value.penerbit,
+                            Tahun: formBuku.value.tahun,
+                            Kategori: formBuku.value.kategori
+                        };
+                        formBuku.value.sinopsis = window.PerpusSinopsis.getSinopsis(dummy);
+                    }
+                };
+
+                const sinkronisasiSinopsisSupabase = async () => {
+                    if (!window.PerpusSinopsis) {
+                        alert("Modul sinopsis belum termuat.");
+                        return;
+                    }
+                    loading.value = true;
+                    try {
+                        // Cek apakah kolom Sinopsis sudah ada di Supabase
+                        const testRes = await supaClient.from('buku').select('Sinopsis').limit(1);
+                        if (testRes.error && testRes.error.message && testRes.error.message.toLowerCase().includes('sinopsis')) {
+                            alert("Kolom 'Sinopsis' belum dibuat di database Supabase.\n\nSilakan buka SQL Editor di Supabase lalu jalankan query berikut:\nALTER TABLE buku ADD COLUMN IF NOT EXISTS \"Sinopsis\" TEXT;\n\nSetelah berhasil dijalankan, silakan klik tombol sinkronisasi ini kembali!");
+                            loading.value = false;
+                            return;
+                        }
+
+                        let count = 0;
+                        for (const b of dataBuku.value) {
+                            const currentSinopsis = b.Sinopsis;
+                            const newSinopsis = window.PerpusSinopsis.getSinopsis(b);
+                            if (!currentSinopsis || currentSinopsis.trim().length < 5) {
+                                await supaClient.from('buku').update({ Sinopsis: newSinopsis }).eq('KodeBuku', b.KodeBuku);
+                                count++;
+                            }
+                        }
+                        await fetchSemuaData();
+                        alert(`Berhasil menyinkronkan sinopsis untuk ${count} buku ke database Supabase!`);
+                    } catch (e) {
+                        console.error("Sinkronisasi gagal:", e);
+                        alert("Gagal sinkronisasi: " + (e.message || ''));
+                    }
+                    loading.value = false;
+                };
 
                return { 
                     isLoggedIn, loginData, loginError, loadingLogin, currentUser, prosesLogin, logout, 
@@ -1599,7 +1761,8 @@
                     prosesUploadExcelLegacy, eksekusiSimpanLegacy, unduhFormatExcelLegacy, hapusSemuaLegacy,
                     downloadLaporanLegacyPDF, searchSiswaDropdown, searchBukuDropdown, filteredSiswaDropdown, filteredBukuDropdown,
                     getNamaSiswa, getKelas, getKontak, isStatusKembali,
-                    cetakFormKosongLandscape, funcPrintLandscape
+                    cetakFormKosongLandscape, funcPrintLandscape,
+                    getSinopsis, autoGenerateSinopsis, sinkronisasiSinopsisSupabase
                 }
             }
         }).mount('#app')
