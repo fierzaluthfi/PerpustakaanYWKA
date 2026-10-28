@@ -56,7 +56,15 @@
                     <button class="md:hidden text-white text-2xl focus:outline-none" @click="mobileMenuOpen = !mobileMenuOpen"><i class="fas" :class="mobileMenuOpen ? 'fa-times' : 'fa-bars'"></i></button>
                 </div>
                 <nav class="flex-grow p-4 space-y-2 overflow-y-auto" :class="{'hidden md:block': !mobileMenuOpen, 'block': mobileMenuOpen}">
-                    <button @click="changeMenu('dashboard')" :class="activeMenu === 'dashboard' ? 'bg-ywka-green border-l-4 border-ywka-orange' : 'hover:bg-blue-800'" class="w-full flex items-center gap-3 px-4 py-3 text-left rounded transition-colors text-sm md:text-base"><i class="fas fa-tachometer-alt w-5 text-center"></i> <span>Dashboard</span></button>
+                    <button @click="changeMenu('dashboard')" :class="activeMenu === 'dashboard' ? 'bg-ywka-green border-l-4 border-ywka-orange' : 'hover:bg-blue-800'" class="w-full flex items-center justify-between px-4 py-3 text-left rounded transition-colors text-sm md:text-base">
+                        <div class="flex items-center gap-3">
+                            <i class="fas fa-tachometer-alt w-5 text-center"></i>
+                            <span>Dashboard</span>
+                        </div>
+                        <span v-if="statistik.pengajuanMenunggu > 0" class="bg-amber-500 text-white text-[10px] font-extrabold px-2 py-0.5 rounded-full shadow animate-pulse">
+                            {{ statistik.pengajuanMenunggu }} Baru
+                        </span>
+                    </button>
                     <button @click="changeMenu('databuku')" :class="activeMenu === 'databuku' ? 'bg-ywka-green border-l-4 border-ywka-orange' : 'hover:bg-blue-800'" class="w-full flex items-center gap-3 px-4 py-3 text-left rounded transition-colors text-sm md:text-base"><i class="fas fa-book w-5 text-center"></i> <span>Database Buku</span></button>
                     <button @click="changeMenu('datasiswa')" :class="activeMenu === 'datasiswa' ? 'bg-ywka-green border-l-4 border-ywka-orange' : 'hover:bg-blue-800'" class="w-full flex items-center gap-3 px-4 py-3 text-left rounded transition-colors text-sm md:text-base"><i class="fas fa-users w-5 text-center"></i> <span>Database Siswa</span></button>
                     <button @click="changeMenu('legacy')" :class="activeMenu === 'legacy' ? 'bg-ywka-green border-l-4 border-ywka-orange' : 'hover:bg-blue-800'" class="w-full flex items-center gap-3 px-4 py-3 text-left rounded transition-colors text-sm md:text-base"><i class="fas fa-file-excel w-5 text-center text-green-300"></i> <span>Data Legacy (Rekap)</span></button>
@@ -91,15 +99,49 @@
                     
                     <!-- MENU 1: DASHBOARD -->
                     <div v-if="activeMenu === 'dashboard'" class="space-y-4 md:space-y-6">
-                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 md:gap-6">
-                            <div class="bg-white p-4 md:p-6 rounded-xl shadow border-l-4 border-ywka-blue"><p class="text-xs md:text-sm text-gray-500">Total Buku</p><p class="text-xl md:text-2xl font-bold text-ywka-blue">{{ statistik.totalBuku }}</p></div>
-                            <div class="bg-white p-4 md:p-6 rounded-xl shadow border-l-4 border-ywka-green"><p class="text-xs md:text-sm text-gray-500">Total Siswa</p><p class="text-xl md:text-2xl font-bold text-ywka-green">{{ statistik.totalSiswa }}</p></div>
-                            <div class="bg-white p-4 md:p-6 rounded-xl shadow border-l-4 border-ywka-orange"><p class="text-xs md:text-sm text-gray-500">Buku Dipinjam</p><p class="text-xl md:text-2xl font-bold text-ywka-orange">{{ statistik.peminjamanAktif }}</p></div>
+                        <!-- KPI STATISTIK (4 KARTU) -->
+                        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
+                            <div class="bg-white p-4 md:p-5 rounded-xl shadow border-l-4 border-ywka-blue">
+                                <p class="text-xs md:text-sm text-gray-500">Total Buku</p>
+                                <p class="text-xl md:text-2xl font-bold text-ywka-blue">{{ statistik.totalBuku }}</p>
+                            </div>
+                            <div class="bg-white p-4 md:p-5 rounded-xl shadow border-l-4 border-ywka-green">
+                                <p class="text-xs md:text-sm text-gray-500">Total Siswa</p>
+                                <p class="text-xl md:text-2xl font-bold text-ywka-green">{{ statistik.totalSiswa }}</p>
+                            </div>
+                            <div class="bg-white p-4 md:p-5 rounded-xl shadow border-l-4 border-ywka-orange">
+                                <p class="text-xs md:text-sm text-gray-500">Buku Dipinjam</p>
+                                <p class="text-xl md:text-2xl font-bold text-ywka-orange">{{ statistik.peminjamanAktif }}</p>
+                            </div>
+                            <div @click="filterStatusTransaksi = (filterStatusTransaksi === 'Menunggu Persetujuan' ? '' : 'Menunggu Persetujuan')" class="bg-white p-4 md:p-5 rounded-xl shadow border-l-4 border-amber-500 cursor-pointer hover:bg-amber-50/50 transition-all select-none" title="Klik untuk filter pengajuan yang menunggu persetujuan">
+                                <div class="flex justify-between items-start">
+                                    <p class="text-xs md:text-sm text-gray-500 font-semibold">Pengajuan Baru</p>
+                                    <span v-if="statistik.pengajuanMenunggu > 0" class="bg-amber-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full animate-pulse">Perlu Tindakan</span>
+                                </div>
+                                <p class="text-xl md:text-2xl font-bold text-amber-600 flex items-baseline gap-2 mt-1">
+                                    <span>{{ statistik.pengajuanMenunggu || 0 }}</span>
+                                    <span class="text-xs font-normal text-gray-400">Pengajuan</span>
+                                </p>
+                            </div>
                         </div>
 
                         <div class="bg-white rounded-xl shadow overflow-hidden">
                             <div class="px-4 md:px-6 py-4 border-b bg-gray-50 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                                <div class="flex flex-wrap items-center gap-2"><h3 class="font-bold mr-2 text-sm md:text-base">Catatan Peminjaman</h3><select v-model="filterBulan" class="border border-gray-300 rounded px-2 py-1 text-xs md:text-sm"><option value="">Semua Waktu Aktif</option><option v-for="b in daftarBulan" :key="b.value" :value="b.value">{{ b.label }}</option><option value="ARSIP" class="font-bold text-ywka-orange">📚 Lihat Arsip Lama</option></select></div>
+                                <div class="flex flex-wrap items-center gap-2">
+                                    <h3 class="font-bold mr-2 text-sm md:text-base">Catatan Peminjaman</h3>
+                                    <select v-model="filterStatusTransaksi" class="border border-gray-300 rounded px-2.5 py-1 text-xs md:text-sm font-semibold bg-white">
+                                        <option value="">Semua Status</option>
+                                        <option value="Menunggu Persetujuan">⏳ Menunggu Persetujuan ({{ statistik.pengajuanMenunggu || 0 }})</option>
+                                        <option value="Meminjam">📖 Sedang Dipinjam</option>
+                                        <option value="Selesai">✅ Sudah Selesai</option>
+                                        <option value="Ditolak">❌ Ditolak</option>
+                                    </select>
+                                    <select v-model="filterBulan" class="border border-gray-300 rounded px-2 py-1 text-xs md:text-sm bg-white">
+                                        <option value="">Semua Waktu Aktif</option>
+                                        <option v-for="b in daftarBulan" :key="b.value" :value="b.value">{{ b.label }}</option>
+                                        <option value="ARSIP" class="font-bold text-ywka-orange">📚 Lihat Arsip Lama</option>
+                                    </select>
+                                </div>
                                 <div class="flex flex-wrap items-center gap-2 w-full md:w-auto">
                                     <button @click="bukaForm('transaksi')" class="flex-1 bg-ywka-orange text-white px-3 py-1.5 rounded shadow font-bold hover:scale-105"><i class="fas fa-plus-circle mr-1"></i> Baru</button>
                                     
@@ -124,27 +166,56 @@
                                             <th class="px-4 py-3">Buku yang Dipinjam</th>
                                             <th class="px-4 py-3">Waktu Kembali</th>
                                             <th class="px-4 py-3 text-center">Kontak (HP)</th>
-                                            <th class="px-4 py-3 text-center">Status</th>
+                                            <th class="px-4 py-3 text-center">Status / Approval</th>
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        <tr v-for="trx in filteredTransaksi" :key="trx.ID" class="border-b hover:bg-gray-50">
-                                            <td class="px-4 py-3 font-bold text-gray-700">{{ trx.TglPinjam }}</td>
-                                            <td class="px-4 py-3 font-semibold text-ywka-blue">{{ trx.Siswa }}</td>
-                                            <td class="px-4 py-3">{{ trx.Buku }}</td>
+                                        <tr v-for="trx in filteredTransaksi" :key="trx.ID" class="border-b hover:bg-gray-50 transition-colors" :class="{'bg-amber-50/70': trx.StatusTransaksi === 'Menunggu Persetujuan'}">
+                                            <td class="px-4 py-3 font-bold text-gray-700">
+                                                {{ trx.TglPinjam }}
+                                                <p v-if="trx.LamaPinjam" class="text-[10px] text-gray-400 font-normal">Durasi: {{ trx.LamaPinjam }} hari</p>
+                                            </td>
+                                            <td class="px-4 py-3">
+                                                <p class="font-semibold text-ywka-blue">{{ trx.Siswa }}</p>
+                                                <p v-if="trx.Keterangan" class="text-[10px] text-gray-500 italic max-w-xs truncate" :title="trx.Keterangan">Ket: {{ trx.Keterangan }}</p>
+                                            </td>
+                                            <td class="px-4 py-3 font-medium">{{ trx.Buku }}</td>
                                             <td class="px-4 py-3 font-bold" :class="trx.StatusTransaksi === 'Selesai' ? 'text-blue-600' : 'text-gray-400'">{{ trx.TglKembali !== '-' ? trx.TglKembali : 'Belum Kembali' }}</td>
                                             <td class="px-4 py-3 text-center font-mono text-gray-600">
-                                                {{ dataSiswa.find(s => trx.Siswa.includes(s.Nama))?.NoHP || '-' }}
+                                                <a v-if="trx.Kontak && trx.Kontak !== '-'" :href="'https://wa.me/' + trx.Kontak.replace(/[^0-9]/g, '')" target="_blank" class="text-green-600 hover:text-green-800 font-bold hover:underline inline-flex items-center gap-1">
+                                                    <i class="fab fa-whatsapp"></i> {{ trx.Kontak }}
+                                                </a>
+                                                <span v-else>{{ dataSiswa.find(s => trx.Siswa.includes(s.Nama))?.NoHP || '-' }}</span>
                                             </td>
                                             <td class="px-4 py-3 text-center">
-                                                <select v-model="trx.StatusTransaksi" @change="ubahStatus(trx.ID, trx.StatusTransaksi)" class="text-[10px] md:text-xs font-bold border rounded px-2 py-1 cursor-pointer" :class="trx.StatusTransaksi === 'Selesai' ? 'bg-green-100 text-green-700 border-green-300' : 'bg-orange-100 text-orange-700 border-orange-300'"><option value="Meminjam">Meminjam</option><option value="Selesai">Selesai</option></select>
-                                                <p v-if="trx.Denda > 0" class="text-[10px] text-red-600 font-bold mt-1">Denda: Rp{{ trx.Denda }}</p>
+                                                <!-- JIKA STATUS MENUNGGU PERSETUJUAN (DARI PENGAJUAN SISWA) -->
+                                                <div v-if="trx.StatusTransaksi === 'Menunggu Persetujuan'" class="flex items-center justify-center gap-1.5">
+                                                    <button @click="setujuiPeminjaman(trx)" class="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded-md text-xs font-bold shadow flex items-center gap-1 transition-transform hover:scale-105 active:scale-95" title="Setujui Peminjaman Siswa">
+                                                        <i class="fas fa-check"></i> Setujui
+                                                    </button>
+                                                    <button @click="tolakPeminjaman(trx)" class="bg-red-500 hover:bg-red-600 text-white px-2.5 py-1 rounded-md text-xs font-bold shadow flex items-center gap-1 transition-transform hover:scale-105 active:scale-95" title="Tolak Pengajuan Siswa">
+                                                        <i class="fas fa-times"></i> Tolak
+                                                    </button>
+                                                </div>
+
+                                                <!-- JIKA STATUS MEMINJAM, SELESAI, ATAU DITOLAK -->
+                                                <div v-else>
+                                                    <select v-model="trx.StatusTransaksi" @change="ubahStatus(trx.ID, trx.StatusTransaksi)" class="text-[10px] md:text-xs font-bold border rounded px-2 py-1 cursor-pointer" :class="{
+                                                        'bg-green-100 text-green-700 border-green-300': trx.StatusTransaksi === 'Selesai',
+                                                        'bg-orange-100 text-orange-700 border-orange-300': trx.StatusTransaksi === 'Meminjam',
+                                                        'bg-red-100 text-red-700 border-red-300': trx.StatusTransaksi === 'Ditolak'
+                                                    }">
+                                                        <option value="Meminjam">Meminjam</option>
+                                                        <option value="Selesai">Selesai</option>
+                                                        <option value="Ditolak">Ditolak</option>
+                                                    </select>
+                                                    <p v-if="trx.Denda > 0" class="text-[10px] text-red-600 font-bold mt-1">Denda: Rp{{ trx.Denda }}</p>
+                                                </div>
                                             </td>
                                         </tr>
                                         <tr v-if="filteredTransaksi.length === 0"><td colspan="6" class="text-center py-8 text-gray-500">Buku catatan kosong.</td></tr>
                                     </tbody>
                                 </table>
-                            </div>
                         </div>
                     </div>
 
@@ -704,7 +775,7 @@
                 const activeMenu = ref('dashboard'); const loading = ref(false); const searchQuery = ref(''); const mobileMenuOpen = ref(false);
                 const isMobile = computed(() => window.innerWidth < 768);
 
-                const dataBuku = ref([]); const dataSiswa = ref([]); const dataTransaksi = ref([]); const dataUsers = ref([]); const statistik = ref({ totalBuku: 0, totalSiswa: 0, peminjamanAktif: 0 });
+                const dataBuku = ref([]); const dataSiswa = ref([]); const dataTransaksi = ref([]); const dataUsers = ref([]); const statistik = ref({ totalBuku: 0, totalSiswa: 0, peminjamanAktif: 0, pengajuanMenunggu: 0 });
                 const formPengaturan = ref({ LamaPinjam: 3, DendaPerHari: 5000, KepalaPerpus: '', NIP: '', KopSurat: '' });
                 const showModal = ref(false); const modalType = ref('buku'); const isEditMode = ref(false); const selectedBuku = ref(null);
                 
@@ -835,6 +906,7 @@
                     });
                 });
 
+                const filterStatusTransaksi = ref('');
                 const filterBulan = ref(''); const filterKategoriBuku = ref(''); const filterRakBuku = ref('');
                 const daftarBulan = computed(() => { 
                     const b = new Set(); 
@@ -855,6 +927,7 @@
                         t.Hidden !== 'legacy' && 
                         t.hidden !== 'legacy' && 
                         !(t.ID && String(t.ID).startsWith('LEGACY-')) && 
+                        (!filterStatusTransaksi.value || t.StatusTransaksi === filterStatusTransaksi.value) &&
                         (!filterBulan.value || (t.TglPinjam && t.TglPinjam.includes(filterBulan.value)) || (t.TglKembali && t.TglKembali.includes(filterBulan.value)))
                     );
                 });
@@ -919,7 +992,8 @@
                         statistik.value = { 
                             totalBuku: dataBuku.value.length, 
                             totalSiswa: dataSiswa.value.length, 
-                            peminjamanAktif: dataTransaksi.value.filter(t => t.StatusTransaksi === 'Meminjam' && t.Hidden !== 'legacy' && t.Hidden !== 'true' && !(t.ID && String(t.ID).startsWith('LEGACY-'))).length 
+                            peminjamanAktif: dataTransaksi.value.filter(t => t.StatusTransaksi === 'Meminjam' && t.Hidden !== 'legacy' && t.Hidden !== 'true' && !(t.ID && String(t.ID).startsWith('LEGACY-'))).length,
+                            pengajuanMenunggu: dataTransaksi.value.filter(t => t.StatusTransaksi === 'Menunggu Persetujuan' && t.Hidden !== 'legacy' && t.Hidden !== 'true' && !(t.ID && String(t.ID).startsWith('LEGACY-'))).length
                         };
                     } catch (err) { console.error(err); }
                     loading.value = false; showModal.value = false;
@@ -1148,6 +1222,78 @@
                     }
                     await fetchSemuaData();
                 }
+
+                const setujuiPeminjaman = async (trx) => {
+                    if (!confirm(`Setujui pengajuan peminjaman buku:\n"${trx.Buku}"\noleh siswa: ${trx.Siswa}?`)) return;
+                    loading.value = true;
+                    try {
+                        let bkKode = '';
+                        const match = trx.Buku.match(/\(([^)]+)\)/g);
+                        if (match) {
+                            bkKode = match[match.length - 1].replace(/[()]/g, '').trim();
+                        }
+                        const bk = dataBuku.value.find(b => b.KodeBuku === bkKode);
+
+                        if (bk && bk.Stok <= 0) {
+                            if (!confirm(`Perhatian: Stok buku "${bk.Judul}" tercatat 0 di sistem. Tetap setujui peminjaman?`)) {
+                                loading.value = false;
+                                return;
+                            }
+                        }
+
+                        const tglPinjam = new Date().toLocaleDateString('en-GB');
+
+                        // 1. Update status peminjaman menjadi 'Meminjam'
+                        const { error } = await supaClient
+                            .from('transaksi')
+                            .update({ 
+                                StatusTransaksi: 'Meminjam', 
+                                TglPinjam: tglPinjam, 
+                                TglKembali: '-', 
+                                Denda: 0 
+                            })
+                            .eq('ID', trx.ID);
+
+                        if (error) throw error;
+
+                        // 2. Kurangi stok buku jika buku ditemukan
+                        if (bk && bk.Stok > 0) {
+                            await supaClient.from('buku').update({ Stok: Math.max(0, bk.Stok - 1) }).eq('KodeBuku', bkKode);
+                        }
+
+                        alert(`Pengajuan peminjaman buku untuk ${trx.Siswa} BERHASIL DISETUJUI!\nStok buku otomatis diperbarui.`);
+                        await fetchSemuaData();
+                    } catch (err) {
+                        console.error("Gagal menyetujui peminjaman:", err);
+                        alert("Gagal menyetujui peminjaman: " + (err.message || 'Cek konsol F12'));
+                    }
+                    loading.value = false;
+                };
+
+                const tolakPeminjaman = async (trx) => {
+                    const alasan = prompt(`Tolak pengajuan peminjaman untuk ${trx.Siswa}?\nMasukkan alasan penolakan (opsional):`, "Buku sedang direservasi / fisik belum tersedia");
+                    if (alasan === null) return;
+
+                    loading.value = true;
+                    try {
+                        const { error } = await supaClient
+                            .from('transaksi')
+                            .update({ 
+                                StatusTransaksi: 'Ditolak',
+                                Keterangan: alasan ? `Ditolak: ${alasan}` : 'Pengajuan ditolak oleh petugas'
+                            })
+                            .eq('ID', trx.ID);
+
+                        if (error) throw error;
+
+                        alert(`Pengajuan peminjaman untuk ${trx.Siswa} telah ditolak.`);
+                        await fetchSemuaData();
+                    } catch (err) {
+                        console.error("Gagal menolak peminjaman:", err);
+                        alert("Gagal menolak peminjaman: " + (err.message || ''));
+                    }
+                    loading.value = false;
+                };
 
                 const importCSVTransaksi = (e) => {
                     const file = e.target.files[0];
@@ -1762,7 +1908,8 @@
                     downloadLaporanLegacyPDF, searchSiswaDropdown, searchBukuDropdown, filteredSiswaDropdown, filteredBukuDropdown,
                     getNamaSiswa, getKelas, getKontak, isStatusKembali,
                     cetakFormKosongLandscape, funcPrintLandscape,
-                    getSinopsis, autoGenerateSinopsis, sinkronisasiSinopsisSupabase
+                    getSinopsis, autoGenerateSinopsis, sinkronisasiSinopsisSupabase,
+                    filterStatusTransaksi, setujuiPeminjaman, tolakPeminjaman
                 }
             }
         }).mount('#app')

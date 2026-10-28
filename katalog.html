@@ -14,26 +14,75 @@
         .bg-ywka-green { background-color: #1b8827; }
         .bg-ywka-orange { background-color: #fd5203; }
         .text-ywka-orange { color: #fd5203; }
+        [v-cloak] { display: none; }
     </style>
 </head>
 <body class="bg-gray-100 font-sans text-gray-800 min-h-screen flex flex-col">
-    <div id="app" class="flex flex-col flex-1">
+    <div id="app" v-cloak class="flex flex-col flex-1">
         
         <!-- HEADER KATALOG -->
-        <header class="bg-ywka-blue text-white shadow-md py-4 px-6 md:px-12 flex flex-col md:flex-row justify-between items-center gap-4 sticky top-0 z-30">
+        <header class="bg-ywka-blue text-white shadow-md py-3.5 px-4 md:px-10 flex flex-col md:flex-row justify-between items-center gap-4 sticky top-0 z-30">
             <div class="flex items-center gap-3">
-                <img src="logo.png" class="w-12 h-12 rounded-lg bg-white p-1 object-contain shadow" alt="Logo YWKA">
+                <img src="logo.png" class="w-11 h-11 rounded-lg bg-white p-1 object-contain shadow" alt="Logo YWKA">
                 <div>
-                    <h1 class="text-xl font-extrabold tracking-wide">Katalog e-Perpus</h1>
+                    <h1 class="text-lg md:text-xl font-extrabold tracking-wide">Katalog e-Perpus</h1>
                     <p class="text-xs text-blue-200">SMA YWKA Bandung</p>
                 </div>
             </div>
+
             <!-- Kotak Pencarian -->
-            <div class="relative w-full md:w-96">
-                <input type="text" v-model="searchQuery" placeholder="Cari judul, pengarang, atau ISBN..." class="w-full bg-white text-gray-800 rounded-full py-2 px-4 pl-10 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400 shadow-inner">
-                <i class="fas fa-search absolute left-3.5 top-3 text-gray-400 text-sm"></i>
+            <div class="relative w-full md:w-72 lg:w-96">
+                <input type="text" v-model="searchQuery" placeholder="Cari judul, pengarang, atau ISBN..." class="w-full bg-white text-gray-800 rounded-full py-2 px-4 pl-10 text-xs md:text-sm focus:outline-none focus:ring-2 focus:ring-orange-400 shadow-inner">
+                <i class="fas fa-search absolute left-3.5 top-2.5 text-gray-400 text-sm"></i>
+            </div>
+
+            <!-- AKUN SISWA / TOMBOL LOGIN -->
+            <div class="flex items-center gap-2.5 w-full md:w-auto justify-end">
+                <!-- Jika belum login -->
+                <button v-if="!currentSiswa" @click="bukaModalLogin" class="bg-ywka-orange hover:bg-orange-600 text-white px-4 py-2 rounded-full text-xs md:text-sm font-bold shadow transition-all flex items-center gap-2 hover:scale-105 active:scale-95">
+                    <i class="fas fa-user-graduate"></i>
+                    <span>Masuk Siswa</span>
+                </button>
+
+                <!-- Jika sudah login -->
+                <div v-else class="flex items-center gap-2">
+                    <button @click="bukaModalRiwayat" class="relative bg-white/15 hover:bg-white/25 border border-white/20 text-white px-3 py-1.5 rounded-full text-xs font-bold transition-all flex items-center gap-1.5 shadow-sm">
+                        <i class="fas fa-book-reader text-yellow-300"></i>
+                        <span class="hidden sm:inline">Pinjaman Saya</span>
+                        <span v-if="riwayatSiswa.length > 0" class="bg-ywka-orange text-white text-[10px] min-w-5 h-5 px-1 rounded-full flex items-center justify-center font-extrabold shadow">
+                            {{ pinjamanAktifCount }}
+                        </span>
+                    </button>
+
+                    <div class="flex items-center gap-2 bg-blue-900/80 border border-blue-400/30 pl-2 pr-3 py-1 rounded-full text-xs shadow-inner">
+                        <div class="w-7 h-7 rounded-full bg-orange-500 text-white flex items-center justify-center font-bold text-xs uppercase shadow">
+                            {{ currentSiswa.Nama ? currentSiswa.Nama.charAt(0) : 'S' }}
+                        </div>
+                        <div class="text-left hidden sm:block max-w-[140px]">
+                            <p class="font-bold text-white text-xs truncate leading-tight">{{ currentSiswa.Nama }}</p>
+                            <p class="text-[10px] text-blue-200 truncate leading-tight">{{ currentSiswa.Kelas }} • {{ currentSiswa.NIS }}</p>
+                        </div>
+                        <button @click="logoutSiswa" class="text-red-300 hover:text-red-100 hover:bg-red-500/20 p-1 rounded-full transition-colors ml-1" title="Keluar">
+                            <i class="fas fa-sign-out-alt"></i>
+                        </button>
+                    </div>
+                </div>
             </div>
         </header>
+
+        <!-- BANNER STATUS LOGIN SISWA -->
+        <div v-if="currentSiswa" class="bg-gradient-to-r from-blue-900 to-indigo-900 text-white py-2.5 px-4 md:px-10 text-xs shadow-inner flex flex-wrap justify-between items-center gap-2">
+            <div class="flex items-center gap-2">
+                <span class="bg-green-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
+                    <span class="w-1.5 h-1.5 rounded-full bg-white animate-ping"></span> Siswa Aktif
+                </span>
+                <span>Halo, <b>{{ currentSiswa.Nama }}</b> (Kelas {{ currentSiswa.Kelas }}). Anda dapat meminjam buku langsung dengan klik tombol <b>"Ajukan Pinjam"</b> pada buku yang tersedia.</span>
+            </div>
+            <button @click="bukaModalRiwayat" class="text-yellow-300 hover:text-yellow-200 font-bold underline flex items-center gap-1">
+                <span>Lihat Status Pengajuan & Pinjaman</span>
+                <i class="fas fa-arrow-right text-[10px]"></i>
+            </button>
+        </div>
 
         <!-- KONTEN UTAMA -->
         <main class="flex-1 max-w-7xl w-full mx-auto p-4 md:p-8 space-y-6">
@@ -50,7 +99,7 @@
                 <i class="fas fa-spinner fa-spin mr-2"></i> Memuat katalog buku...
             </div>
 
-            <!-- GRID DAFTAR BUKU (SESUAI REFERENSI) -->
+            <!-- GRID DAFTAR BUKU -->
             <div v-else class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 md:gap-6">
                 <div v-for="buku in filteredBuku" :key="buku.KodeBuku" @click="lihatDetailBuku(buku)" class="bg-white rounded-xl shadow-md overflow-hidden border hover:shadow-xl hover:-translate-y-1 transition-all duration-200 flex flex-col group cursor-pointer" title="Klik untuk melihat detail & informasi buku">
                     
@@ -69,7 +118,7 @@
                         <!-- Hover Overlay Hint -->
                         <div class="absolute inset-0 bg-blue-900/40 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center">
                             <span class="bg-white/95 text-ywka-blue px-3 py-1.5 rounded-full text-xs font-bold shadow-lg flex items-center gap-1.5 transform scale-90 group-hover:scale-100 transition-transform">
-                                <i class="fas fa-info-circle text-ywka-orange"></i> Detail Buku
+                                <i class="fas fa-info-circle text-ywka-orange"></i> Detail & Pinjam
                             </span>
                         </div>
                     </div>
@@ -96,7 +145,7 @@
             </div>
         </main>
 
-        <!-- MODAL DETAIL DAN INFORMASI BUKU (CLIENT) -->
+        <!-- MODAL DETAIL DAN INFORMASI BUKU -->
         <div v-if="showModalDetail && selectedBuku" class="fixed inset-0 bg-black/60 backdrop-blur-sm flex justify-center items-center z-50 p-4 overflow-y-auto" @click.self="tutupModalDetail">
             <div class="bg-white rounded-2xl shadow-2xl p-5 md:p-6 w-full max-w-xl border-t-8 border-ywka-blue relative transform transition-all animate-in fade-in zoom-in-95 duration-200 my-auto">
                 <!-- Tombol Close (X) -->
@@ -172,7 +221,7 @@
                     </div>
                 </div>
 
-                <!-- Bagian Sinopsis Buku (Otomatis & Terintegrasi) -->
+                <!-- Bagian Sinopsis Buku -->
                 <div class="mt-4 pt-3.5 border-t border-gray-100">
                     <div class="flex items-center justify-between mb-2">
                         <h5 class="text-xs font-bold text-gray-800 flex items-center gap-1.5">
@@ -188,12 +237,256 @@
                     </div>
                 </div>
 
-                <!-- Footer Modal (Hanya tombol Tutup, tanpa cetak label & tanpa edit buku) -->
-                <div class="mt-5 flex justify-end border-t pt-3">
-                    <button @click="tutupModalDetail" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-5 py-2 rounded-lg text-xs md:text-sm font-bold transition-colors">
-                        <i class="fas fa-times mr-1"></i> Tutup
+                <!-- Footer Modal Detail: Tombol Pinjam & Tutup -->
+                <div class="mt-5 flex flex-wrap items-center justify-between border-t pt-3 gap-2">
+                    <div class="text-xs text-gray-500 flex items-center gap-1">
+                        <i class="fas fa-info-circle text-ywka-blue"></i>
+                        <span>{{ selectedBuku.Stok > 0 ? 'Buku dapat dipinjam mandiri oleh siswa.' : 'Buku sedang tidak tersedia.' }}</span>
+                    </div>
+                    <div class="flex items-center gap-2 ml-auto">
+                        <button @click="tutupModalDetail" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-lg text-xs md:text-sm font-bold transition-colors">
+                            <i class="fas fa-times mr-1"></i> Tutup
+                        </button>
+                        <button v-if="selectedBuku.Stok > 0" @click="mulaiPinjam(selectedBuku)" class="bg-ywka-orange hover:bg-orange-600 text-white px-5 py-2 rounded-lg text-xs md:text-sm font-bold transition-all shadow-md hover:shadow-orange-500/30 flex items-center gap-1.5 active:scale-95">
+                            <i class="fas fa-hand-holding-heart"></i>
+                            <span>Ajukan Pinjam Buku</span>
+                        </button>
+                        <button v-else disabled class="bg-gray-200 text-gray-400 px-4 py-2 rounded-lg text-xs md:text-sm font-bold cursor-not-allowed flex items-center gap-1.5">
+                            <i class="fas fa-ban"></i>
+                            <span>Stok Habis</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- MODAL LOGIN SISWA (NIS) -->
+        <div v-if="showModalLogin" class="fixed inset-0 bg-black/60 backdrop-blur-sm flex justify-center items-center z-50 p-4" @click.self="tutupModalLogin">
+            <div class="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-md border-t-8 border-ywka-orange relative animate-in fade-in zoom-in-95 duration-200">
+                <button @click="tutupModalLogin" class="absolute top-4 right-4 text-gray-400 hover:text-gray-700 text-xl w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100">
+                    <i class="fas fa-times"></i>
+                </button>
+
+                <div class="text-center mb-6">
+                    <div class="w-16 h-16 bg-orange-100 text-ywka-orange rounded-full flex items-center justify-center mx-auto mb-3 text-2xl shadow-inner">
+                        <i class="fas fa-user-graduate"></i>
+                    </div>
+                    <h3 class="font-extrabold text-lg text-gray-800">Masuk Siswa Perpustakaan</h3>
+                    <p class="text-xs text-gray-500 mt-1">Gunakan Nomor Induk Siswa (NIS) untuk meminjam buku secara mandiri</p>
+                </div>
+
+                <form @submit.prevent="prosesLoginSiswa" class="space-y-4">
+                    <div>
+                        <label class="block text-xs font-bold text-gray-700 mb-1">Nomor Induk Siswa (NIS)</label>
+                        <div class="relative">
+                            <i class="fas fa-id-card absolute left-3.5 top-3 text-gray-400 text-sm"></i>
+                            <input type="text" v-model="inputNIS" required placeholder="Contoh: 242510001" autofocus class="w-full border-2 border-gray-200 pl-10 pr-4 py-2.5 rounded-xl focus:border-ywka-orange outline-none text-sm transition-all font-mono font-bold tracking-wide text-gray-800">
+                        </div>
+                        <p class="text-[11px] text-gray-400 mt-1.5 flex items-center gap-1">
+                            <i class="fas fa-info-circle text-blue-500"></i> Pastikan NIS Anda terdaftar aktif di SMA YWKA Bandung
+                        </p>
+                    </div>
+
+                    <div v-if="errorLoginSiswa" class="bg-red-50 border border-red-200 text-red-600 text-xs p-3 rounded-xl flex items-start gap-2">
+                        <i class="fas fa-exclamation-circle mt-0.5 text-sm"></i>
+                        <span>{{ errorLoginSiswa }}</span>
+                    </div>
+
+                    <button type="submit" :disabled="loadingLoginSiswa" class="w-full bg-ywka-orange hover:bg-orange-600 text-white py-3 rounded-xl font-bold transition-all shadow-lg hover:shadow-orange-500/30 flex items-center justify-center gap-2 text-sm disabled:opacity-50">
+                        <i v-if="loadingLoginSiswa" class="fas fa-spinner fa-spin"></i>
+                        <i v-else class="fas fa-sign-in-alt"></i>
+                        <span>{{ loadingLoginSiswa ? 'Memverifikasi Data...' : 'Masuk Sekarang' }}</span>
+                    </button>
+                </form>
+
+                <div class="mt-4 pt-4 border-t text-center text-xs text-gray-400">
+                    Belum mengetahui NIS Anda? Silakan hubungi petugas perpustakaan di sekolah.
+                </div>
+            </div>
+        </div>
+
+        <!-- MODAL AJUKAN PEMINJAMAN BUKU -->
+        <div v-if="showModalPinjam && bukuDipinjam && currentSiswa" class="fixed inset-0 bg-black/60 backdrop-blur-sm flex justify-center items-center z-50 p-4 overflow-y-auto" @click.self="tutupModalPinjam">
+            <div class="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-lg border-t-8 border-ywka-blue relative my-auto animate-in fade-in zoom-in-95 duration-200">
+                <button @click="tutupModalPinjam" class="absolute top-4 right-4 text-gray-400 hover:text-gray-700 text-xl w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100">
+                    <i class="fas fa-times"></i>
+                </button>
+
+                <h3 class="font-extrabold text-base md:text-lg text-gray-800 mb-1 flex items-center gap-2">
+                    <i class="fas fa-clipboard-check text-ywka-blue text-xl"></i>
+                    <span>Ajukan Peminjaman Buku</span>
+                </h3>
+                <p class="text-xs text-gray-500 mb-4 pb-3 border-b">Konfirmasi peminjaman buku untuk diproses oleh petugas perpustakaan</p>
+
+                <!-- Ringkasan Buku & Siswa -->
+                <div class="bg-blue-50/70 border border-blue-200/80 rounded-xl p-3.5 mb-4 flex gap-3.5 items-center">
+                    <div class="w-14 h-20 bg-gray-200 rounded-lg overflow-hidden flex-shrink-0 shadow border">
+                        <img v-if="bukuDipinjam.Gambar" :src="bukuDipinjam.Gambar" class="w-full h-full object-cover">
+                        <div v-else class="w-full h-full flex items-center justify-center text-gray-400"><i class="fas fa-book text-xl"></i></div>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <span class="text-[10px] uppercase font-bold text-blue-700 bg-blue-100 px-2 py-0.5 rounded">{{ bukuDipinjam.Kategori }}</span>
+                        <h4 class="font-bold text-xs md:text-sm text-gray-800 truncate mt-1">{{ bukuDipinjam.Judul }}</h4>
+                        <p class="text-[11px] text-gray-500 truncate mt-0.5">{{ bukuDipinjam.Pengarang }} • Rak: <b>{{ bukuDipinjam.Rak }}</b></p>
+                        <p class="text-[11px] font-semibold text-ywka-green mt-0.5">Tersedia {{ bukuDipinjam.Stok }} eksemplar</p>
+                    </div>
+                </div>
+
+                <!-- Form Peminjam -->
+                <form @submit.prevent="kirimPengajuanPinjam" class="space-y-3.5">
+                    <div class="grid grid-cols-2 gap-3 bg-gray-50 p-3 rounded-xl border text-xs">
+                        <div>
+                            <span class="text-gray-500 block">Nama Peminjam</span>
+                            <span class="font-bold text-gray-800 truncate block">{{ currentSiswa.Nama }}</span>
+                        </div>
+                        <div>
+                            <span class="text-gray-500 block">Kelas & NIS</span>
+                            <span class="font-bold text-gray-800 truncate block">{{ currentSiswa.Kelas }} ({{ currentSiswa.NIS }})</span>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-xs font-bold text-gray-700 mb-1">Durasi Peminjaman</label>
+                            <select v-model="formPengajuan.lamaPinjam" class="w-full border rounded-xl p-2.5 text-xs font-semibold bg-white focus:border-ywka-blue outline-none">
+                                <option :value="3">3 Hari (Standar)</option>
+                                <option :value="7">7 Hari (1 Minggu)</option>
+                                <option :value="14">14 Hari (2 Minggu)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-gray-700 mb-1">No. WhatsApp / Kontak</label>
+                            <input type="text" v-model="formPengajuan.kontak" placeholder="Contoh: 08123456789" class="w-full border rounded-xl p-2.5 text-xs bg-white focus:border-ywka-blue outline-none">
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold text-gray-700 mb-1">Catatan / Keperluan (Opsional)</label>
+                        <textarea v-model="formPengajuan.catatan" rows="2" placeholder="Contoh: Untuk referensi tugas mata pelajaran atau literasi" class="w-full border rounded-xl p-2.5 text-xs bg-white focus:border-ywka-blue outline-none resize-none"></textarea>
+                    </div>
+
+                    <div class="bg-amber-50 border border-amber-200 text-amber-800 text-[11px] p-3 rounded-xl flex items-start gap-2">
+                        <i class="fas fa-info-circle mt-0.5 text-amber-600"></i>
+                        <div>
+                            <p class="font-bold">Alur Peminjaman:</p>
+                            <p class="mt-0.5 leading-snug">Pengajuan Anda akan ditinjau dan <b>disetujui (diapprove)</b> oleh petugas perpustakaan SMA YWKA. Setelah disetujui, silakan ambil buku fisik di ruang perpustakaan.</p>
+                        </div>
+                    </div>
+
+                    <div class="flex gap-2 justify-end pt-3 border-t">
+                        <button type="button" @click="tutupModalPinjam" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2.5 rounded-xl text-xs font-bold transition-colors">
+                            Batal
+                        </button>
+                        <button type="submit" :disabled="loadingPengajuan" class="bg-ywka-orange hover:bg-orange-600 text-white px-5 py-2.5 rounded-xl text-xs font-bold shadow-lg hover:shadow-orange-500/30 transition-all flex items-center gap-2 disabled:opacity-50">
+                            <i v-if="loadingPengajuan" class="fas fa-spinner fa-spin"></i>
+                            <i v-else class="fas fa-paper-plane"></i>
+                            <span>{{ loadingPengajuan ? 'Mengirim Pengajuan...' : 'Kirim Pengajuan Pinjaman' }}</span>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- MODAL PINJAMAN SAYA -->
+        <div v-if="showModalRiwayat && currentSiswa" class="fixed inset-0 bg-black/60 backdrop-blur-sm flex justify-center items-center z-50 p-4 overflow-y-auto" @click.self="tutupModalRiwayat">
+            <div class="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-2xl border-t-8 border-ywka-blue relative my-auto animate-in fade-in zoom-in-95 duration-200">
+                <button @click="tutupModalRiwayat" class="absolute top-4 right-4 text-gray-400 hover:text-gray-700 text-xl w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100">
+                    <i class="fas fa-times"></i>
+                </button>
+
+                <div class="flex items-center gap-3 pb-3 border-b mb-4">
+                    <div class="w-10 h-10 rounded-full bg-blue-100 text-ywka-blue flex items-center justify-center font-bold text-lg">
+                        <i class="fas fa-book-reader"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-extrabold text-base md:text-lg text-gray-800 leading-tight">Pinjaman Buku Saya</h3>
+                        <p class="text-xs text-gray-500">{{ currentSiswa.Nama }} • Kelas {{ currentSiswa.Kelas }} ({{ currentSiswa.NIS }})</p>
+                    </div>
+                </div>
+
+                <!-- Tabs Filter Status -->
+                <div class="flex flex-wrap gap-2 mb-4">
+                    <button @click="filterRiwayat = ''" :class="filterRiwayat === '' ? 'bg-ywka-blue text-white shadow' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'" class="px-3 py-1.5 rounded-lg text-xs font-bold transition-colors">
+                        Semua ({{ riwayatSiswa.length }})
+                    </button>
+                    <button @click="filterRiwayat = 'Menunggu Persetujuan'" :class="filterRiwayat === 'Menunggu Persetujuan' ? 'bg-amber-500 text-white shadow' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'" class="px-3 py-1.5 rounded-lg text-xs font-bold transition-colors flex items-center gap-1">
+                        <i class="fas fa-clock"></i>
+                        <span>Menunggu ({{ riwayatSiswa.filter(r => r.StatusTransaksi === 'Menunggu Persetujuan').length }})</span>
+                    </button>
+                    <button @click="filterRiwayat = 'Meminjam'" :class="filterRiwayat === 'Meminjam' ? 'bg-blue-600 text-white shadow' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'" class="px-3 py-1.5 rounded-lg text-xs font-bold transition-colors flex items-center gap-1">
+                        <i class="fas fa-book-open"></i>
+                        <span>Dipinjam ({{ riwayatSiswa.filter(r => r.StatusTransaksi === 'Meminjam').length }})</span>
+                    </button>
+                    <button @click="filterRiwayat = 'Selesai'" :class="filterRiwayat === 'Selesai' ? 'bg-green-600 text-white shadow' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'" class="px-3 py-1.5 rounded-lg text-xs font-bold transition-colors flex items-center gap-1">
+                        <i class="fas fa-check-circle"></i>
+                        <span>Kembali ({{ riwayatSiswa.filter(r => r.StatusTransaksi === 'Selesai').length }})</span>
                     </button>
                 </div>
+
+                <!-- List Transaksi Siswa -->
+                <div v-if="loadingRiwayat" class="text-center py-12 text-ywka-orange text-sm font-bold animate-pulse">
+                    <i class="fas fa-spinner fa-spin mr-2"></i> Memuat daftar pinjaman...
+                </div>
+
+                <div v-else-if="filteredRiwayatSiswa.length === 0" class="text-center py-12 bg-gray-50 rounded-xl border border-dashed">
+                    <i class="fas fa-book-open text-3xl text-gray-300 mb-2"></i>
+                    <p class="text-xs text-gray-500 font-semibold">Belum ada catatan peminjaman pada kategori ini.</p>
+                </div>
+
+                <div v-else class="space-y-3 max-h-80 overflow-y-auto pr-1">
+                    <div v-for="item in filteredRiwayatSiswa" :key="item.ID" class="p-3.5 bg-gray-50 hover:bg-blue-50/50 rounded-xl border transition-all flex flex-col sm:flex-row justify-between sm:items-center gap-3">
+                        <div class="space-y-1">
+                            <div class="flex items-center gap-2">
+                                <span :class="{
+                                    'bg-amber-100 text-amber-800 border-amber-300': item.StatusTransaksi === 'Menunggu Persetujuan',
+                                    'bg-blue-100 text-blue-800 border-blue-300': item.StatusTransaksi === 'Meminjam',
+                                    'bg-green-100 text-green-800 border-green-300': item.StatusTransaksi === 'Selesai',
+                                    'bg-red-100 text-red-800 border-red-300': item.StatusTransaksi === 'Ditolak'
+                                }" class="border text-[10px] font-extrabold px-2 py-0.5 rounded-full flex items-center gap-1">
+                                    <i class="fas" :class="{
+                                        'fa-clock': item.StatusTransaksi === 'Menunggu Persetujuan',
+                                        'fa-book-reader': item.StatusTransaksi === 'Meminjam',
+                                        'fa-check-circle': item.StatusTransaksi === 'Selesai',
+                                        'fa-times-circle': item.StatusTransaksi === 'Ditolak'
+                                    }"></i>
+                                    <span>{{ item.StatusTransaksi }}</span>
+                                </span>
+                                <span class="text-[10px] font-mono text-gray-400">ID: {{ item.ID }}</span>
+                            </div>
+                            <h4 class="font-bold text-xs md:text-sm text-gray-800">{{ item.Buku }}</h4>
+                            <p class="text-[11px] text-gray-500">
+                                Tgl Pengajuan: <b>{{ item.TglPinjam }}</b> • Durasi: <b>{{ item.LamaPinjam || 3 }} Hari</b>
+                                <span v-if="item.TglKembali && item.TglKembali !== '-'"> • Kembali: <b>{{ item.TglKembali }}</b></span>
+                            </p>
+                        </div>
+
+                        <!-- Action: Batalkan jika masih menunggu persetujuan -->
+                        <div class="flex items-center gap-2 self-end sm:self-center">
+                            <button v-if="item.StatusTransaksi === 'Menunggu Persetujuan'" @click="batalkanPengajuan(item.ID)" class="text-xs bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 px-3 py-1.5 rounded-lg font-bold transition-colors flex items-center gap-1 shadow-sm">
+                                <i class="fas fa-trash-alt text-[10px]"></i>
+                                <span>Batalkan</span>
+                            </button>
+                            <span v-else-if="item.StatusTransaksi === 'Meminjam'" class="text-[11px] text-blue-700 bg-blue-50 px-2.5 py-1 rounded-lg border border-blue-200 font-semibold flex items-center gap-1">
+                                <i class="fas fa-check-circle text-green-600"></i> Disetujui • Ambil di Perpus
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-4 pt-3 border-t flex justify-end">
+                    <button @click="tutupModalRiwayat" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-lg text-xs font-bold">
+                        Tutup
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- TOAST NOTIFIKASI -->
+        <div v-if="toastMsg" class="fixed bottom-6 right-6 z-50 animate-in slide-in-from-bottom-5 duration-300">
+            <div :class="toastType === 'error' ? 'bg-red-600' : (toastType === 'warning' ? 'bg-amber-600' : 'bg-emerald-600')" class="text-white px-5 py-3 rounded-xl shadow-2xl flex items-center gap-3 text-xs md:text-sm font-bold">
+                <i class="fas" :class="toastType === 'error' ? 'fa-exclamation-circle text-lg' : (toastType === 'warning' ? 'fa-exclamation-triangle text-lg' : 'fa-check-circle text-lg')"></i>
+                <span>{{ toastMsg }}</span>
+                <button @click="toastMsg = ''" class="ml-2 text-white/80 hover:text-white"><i class="fas fa-times"></i></button>
             </div>
         </div>
 
@@ -218,12 +511,49 @@
                 const showModalDetail = ref(false);
                 const selectedBuku = ref(null);
 
+                // --- STATE AUTH SISWA ---
+                const currentSiswa = ref(null);
+                const showModalLogin = ref(false);
+                const inputNIS = ref('');
+                const loadingLoginSiswa = ref(false);
+                const errorLoginSiswa = ref('');
+                const pendingBukuToBorrow = ref(null);
+
+                // --- STATE PENGAJUAN PINJAM ---
+                const showModalPinjam = ref(false);
+                const bukuDipinjam = ref(null);
+                const loadingPengajuan = ref(false);
+                const formPengajuan = ref({
+                    lamaPinjam: 3,
+                    kontak: '',
+                    catatan: ''
+                });
+
+                // --- STATE RIWAYAT PINJAMAN SAYA ---
+                const showModalRiwayat = ref(false);
+                const riwayatSiswa = ref([]);
+                const loadingRiwayat = ref(false);
+                const filterRiwayat = ref('');
+
+                // --- TOAST NOTIFIKASI ---
+                const toastMsg = ref('');
+                const toastType = ref('success');
+                let toastTimer = null;
+                const showToast = (msg, type = 'success') => {
+                    toastMsg.value = msg;
+                    toastType.value = type;
+                    if (toastTimer) clearTimeout(toastTimer);
+                    toastTimer = setTimeout(() => {
+                        toastMsg.value = '';
+                    }, 4000);
+                };
+
                 const fetchBukuKatalog = async () => {
                     loading.value = true;
                     const { data, error } = await supaClient.from('buku').select('*');
                     if (data) dataBuku.value = data;
                     loading.value = false;
-                }
+                };
 
                 const lihatDetailBuku = (buku) => {
                     selectedBuku.value = buku;
@@ -235,11 +565,250 @@
                     selectedBuku.value = null;
                 };
 
-                onMounted(() => {
+                // --- LOGIKA AUTH SISWA ---
+                const bukaModalLogin = () => {
+                    errorLoginSiswa.value = '';
+                    inputNIS.value = '';
+                    showModalLogin.value = true;
+                };
+
+                const tutupModalLogin = () => {
+                    showModalLogin.value = false;
+                    errorLoginSiswa.value = '';
+                };
+
+                const prosesLoginSiswa = async () => {
+                    const nis = String(inputNIS.value).trim();
+                    if (!nis) {
+                        errorLoginSiswa.value = "Harap masukkan NIS Anda!";
+                        return;
+                    }
+
+                    loadingLoginSiswa.value = true;
+                    errorLoginSiswa.value = '';
+
+                    try {
+                        // Cari siswa berdasarkan NIS (string atau angka)
+                        let { data, error } = await supaClient
+                            .from('siswa')
+                            .select('*')
+                            .eq('NIS', nis)
+                            .maybeSingle();
+
+                        if (!data) {
+                            // Coba query fleksibel jika NIS disimpan dengan variasi tipe
+                            const { data: listSiswa } = await supaClient
+                                .from('siswa')
+                                .select('*');
+                            if (listSiswa) {
+                                data = listSiswa.find(s => String(s.NIS).trim() === nis);
+                            }
+                        }
+
+                        if (!data) {
+                            errorLoginSiswa.value = "NIS tidak ditemukan! Pastikan nomor yang dimasukkan benar.";
+                            loadingLoginSiswa.value = false;
+                            return;
+                        }
+
+                        if (data.Status && data.Status.toLowerCase() !== 'aktif') {
+                            errorLoginSiswa.value = `Akun siswa berstatus '${data.Status}'. Silakan hubungi petugas perpustakaan.`;
+                            loadingLoginSiswa.value = false;
+                            return;
+                        }
+
+                        // Berhasil login
+                        currentSiswa.value = data;
+                        localStorage.setItem('sip_ywka_siswa', JSON.stringify(data));
+                        tutupModalLogin();
+                        showToast(`Selamat datang, ${data.Nama}!`);
+
+                        // Muat riwayat transaksi siswa
+                        await fetchRiwayatSiswa();
+
+                        // Jika login karena ingin meminjam buku tertentu, langsung buka modal pinjam
+                        if (pendingBukuToBorrow.value) {
+                            const b = pendingBukuToBorrow.value;
+                            pendingBukuToBorrow.value = null;
+                            mulaiPinjam(b);
+                        }
+                    } catch (err) {
+                        console.error("Error login siswa:", err);
+                        errorLoginSiswa.value = "Terjadi kendala saat memeriksa data. Silakan coba lagi.";
+                    }
+                    loadingLoginSiswa.value = false;
+                };
+
+                const logoutSiswa = () => {
+                    if (confirm("Keluar dari akun siswa?")) {
+                        currentSiswa.value = null;
+                        localStorage.removeItem('sip_ywka_siswa');
+                        riwayatSiswa.value = [];
+                        showToast("Anda telah keluar.", "info");
+                    }
+                };
+
+                // --- LOGIKA RIWAYAT SISWA ---
+                const fetchRiwayatSiswa = async () => {
+                    if (!currentSiswa.value) return;
+                    loadingRiwayat.value = true;
+                    try {
+                        const nama = currentSiswa.value.Nama.trim();
+                        // Ambil semua transaksi aktif siswa ini
+                        const { data, error } = await supaClient
+                            .from('transaksi')
+                            .select('*')
+                            .ilike('Siswa', `%${nama}%`)
+                            .order('ID', { ascending: false });
+
+                        if (data) {
+                            // Filter data yang tidak di-hide permanen
+                            riwayatSiswa.value = data.filter(t => t.Hidden !== 'true' && t.hidden !== 'true' && t.Hidden !== 'legacy');
+                        }
+                    } catch (err) {
+                        console.error("Error fetch riwayat siswa:", err);
+                    }
+                    loadingRiwayat.value = false;
+                };
+
+                const bukaModalRiwayat = async () => {
+                    await fetchRiwayatSiswa();
+                    showModalRiwayat.value = true;
+                };
+
+                const tutupModalRiwayat = () => {
+                    showModalRiwayat.value = false;
+                };
+
+                // --- LOGIKA PINJAM BUKU OLEH SISWA ---
+                const mulaiPinjam = (buku) => {
+                    if (!currentSiswa.value) {
+                        pendingBukuToBorrow.value = buku;
+                        showToast("Silakan masuk dengan NIS Anda terlebih dahulu untuk meminjam.", "warning");
+                        bukaModalLogin();
+                        return;
+                    }
+
+                    // Cek apakah siswa sudah memiliki pinjaman aktif untuk buku ini
+                    const sudahPinjam = riwayatSiswa.value.find(r => 
+                        r.Buku.includes(buku.KodeBuku) && 
+                        (r.StatusTransaksi === 'Menunggu Persetujuan' || r.StatusTransaksi === 'Meminjam')
+                    );
+
+                    if (sudahPinjam) {
+                        showToast(`Anda sudah memiliki pengajuan atau sedang meminjam buku "${buku.Judul}"!`, "warning");
+                        bukaModalRiwayat();
+                        return;
+                    }
+
+                    bukuDipinjam.value = buku;
+                    formPengajuan.value.lamaPinjam = 3;
+                    formPengajuan.value.kontak = currentSiswa.value.NoHP || '';
+                    formPengajuan.value.catatan = '';
+                    tutupModalDetail();
+                    showModalPinjam.value = true;
+                };
+
+                const tutupModalPinjam = () => {
+                    showModalPinjam.value = false;
+                    bukuDipinjam.value = null;
+                };
+
+                const kirimPengajuanPinjam = async () => {
+                    if (!bukuDipinjam.value || !currentSiswa.value) return;
+                    loadingPengajuan.value = true;
+
+                    try {
+                        const idTrx = 'TRX-SWA-' + Date.now().toString().slice(-6) + Math.floor(Math.random() * 100);
+                        const namaLengkap = currentSiswa.value.Nama;
+                        const kelas = currentSiswa.value.Kelas || 'Umum';
+
+                        const trxPayload = {
+                            ID: idTrx,
+                            Siswa: `${namaLengkap} (${kelas})`,
+                            Buku: `${bukuDipinjam.value.Judul} (${bukuDipinjam.value.KodeBuku})`,
+                            TglPinjam: new Date().toLocaleDateString('en-GB'),
+                            TglKembali: '-',
+                            StatusTransaksi: 'Menunggu Persetujuan',
+                            LamaPinjam: parseInt(formPengajuan.value.lamaPinjam) || 3,
+                            Denda: 0,
+                            Hidden: '',
+                            NamaPeminjam: namaLengkap,
+                            Kelas: kelas,
+                            Kontak: (formPengajuan.value.kontak || currentSiswa.value.NoHP || '-').trim(),
+                            Keterangan: (formPengajuan.value.catatan || 'Pengajuan mandiri via katalog').trim()
+                        };
+
+                        let { error } = await supaClient.from('transaksi').insert(trxPayload);
+
+                        // Fallback jika ada kolom opsional yang belum ada di schema database
+                        if (error) {
+                            console.warn("Fallback insert transaksi kolom standar:", error.message);
+                            const fallbackPayload = {
+                                ID: trxPayload.ID,
+                                Siswa: trxPayload.Siswa,
+                                Buku: trxPayload.Buku,
+                                TglPinjam: trxPayload.TglPinjam,
+                                TglKembali: trxPayload.TglKembali,
+                                StatusTransaksi: trxPayload.StatusTransaksi,
+                                LamaPinjam: trxPayload.LamaPinjam,
+                                Denda: 0
+                            };
+                            const resRetry = await supaClient.from('transaksi').insert(fallbackPayload);
+                            error = resRetry.error;
+                        }
+
+                        if (error) throw error;
+
+                        showToast("Pengajuan peminjaman berhasil dikirim! Menunggu persetujuan petugas perpustakaan.");
+                        tutupModalPinjam();
+                        await fetchRiwayatSiswa();
+                        bukaModalRiwayat();
+                    } catch (err) {
+                        console.error("Gagal mengirim pengajuan:", err);
+                        showToast("Gagal mengirim pengajuan pinjaman: " + (err.message || 'Coba lagi'), "error");
+                    }
+                    loadingPengajuan.value = false;
+                };
+
+                const batalkanPengajuan = async (trxId) => {
+                    if (!confirm("Yakin ingin membatalkan pengajuan peminjaman ini?")) return;
+                    try {
+                        const { error } = await supaClient
+                            .from('transaksi')
+                            .delete()
+                            .eq('ID', trxId)
+                            .eq('StatusTransaksi', 'Menunggu Persetujuan');
+
+                        if (error) throw error;
+                        showToast("Pengajuan peminjaman berhasil dibatalkan.", "info");
+                        await fetchRiwayatSiswa();
+                    } catch (err) {
+                        console.error("Gagal batalkan pengajuan:", err);
+                        showToast("Gagal membatalkan pengajuan.", "error");
+                    }
+                };
+
+                onMounted(async () => {
+                    // Cek sesi login siswa dari localStorage
+                    const savedSiswa = localStorage.getItem('sip_ywka_siswa');
+                    if (savedSiswa) {
+                        try {
+                            currentSiswa.value = JSON.parse(savedSiswa);
+                            fetchRiwayatSiswa();
+                        } catch (e) {
+                            localStorage.removeItem('sip_ywka_siswa');
+                        }
+                    }
+
                     fetchBukuKatalog();
+
                     window.addEventListener('keydown', (e) => {
-                        if (e.key === 'Escape' && showModalDetail.value) {
-                            tutupModalDetail();
+                        if (e.key === 'Escape') {
+                            if (showModalDetail.value) tutupModalDetail();
+                            if (showModalLogin.value) tutupModalLogin();
+                            if (showModalPinjam.value) tutupModalPinjam();
+                            if (showModalRiwayat.value) tutupModalRiwayat();
                         }
                     });
                 });
@@ -261,6 +830,15 @@
                     });
                 });
 
+                const filteredRiwayatSiswa = computed(() => {
+                    if (!filterRiwayat.value) return riwayatSiswa.value;
+                    return riwayatSiswa.value.filter(r => r.StatusTransaksi === filterRiwayat.value);
+                });
+
+                const pinjamanAktifCount = computed(() => {
+                    return riwayatSiswa.value.filter(r => r.StatusTransaksi === 'Menunggu Persetujuan' || r.StatusTransaksi === 'Meminjam').length;
+                });
+
                 const getSinopsis = (buku) => {
                     if (!buku) return '';
                     if (window.PerpusSinopsis && typeof window.PerpusSinopsis.getSinopsis === 'function') {
@@ -271,10 +849,18 @@
 
                 return { 
                     dataBuku, loading, searchQuery, filterKategori, daftarKategori, filteredBuku,
-                    showModalDetail, selectedBuku, lihatDetailBuku, tutupModalDetail, getSinopsis
+                    showModalDetail, selectedBuku, lihatDetailBuku, tutupModalDetail, getSinopsis,
+                    currentSiswa, showModalLogin, inputNIS, loadingLoginSiswa, errorLoginSiswa,
+                    bukaModalLogin, tutupModalLogin, prosesLoginSiswa, logoutSiswa,
+                    showModalPinjam, bukuDipinjam, loadingPengajuan, formPengajuan, mulaiPinjam,
+                    tutupModalPinjam, kirimPengajuanPinjam, batalkanPengajuan,
+                    showModalRiwayat, riwayatSiswa, loadingRiwayat, filterRiwayat, filteredRiwayatSiswa,
+                    bukaModalRiwayat, tutupModalRiwayat, pinjamanAktifCount,
+                    toastMsg, toastType
                 };
             }
         }).mount('#app');
     </script>
 </body>
 </html>
+
