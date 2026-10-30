@@ -8,6 +8,8 @@
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@zxing/library@0.21.3/umd/index.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
     <script src="sinopsis-data.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
@@ -277,7 +279,30 @@
                     </div>
                     <!-- MENU 3: DATABASE SISWA -->
                     <div v-if="activeMenu === 'datasiswa'" class="bg-white rounded-xl shadow overflow-hidden flex flex-col h-full">
-                        <div class="p-4 bg-gray-50 flex justify-between border-b"><button @click="bukaForm('siswa')" class="bg-ywka-green text-white px-4 py-2 text-sm rounded shadow font-bold"><i class="fas fa-user-plus mr-2"></i>Daftarkan Siswa</button></div>
+                        <div class="p-3 md:p-4 bg-gray-50 flex flex-wrap items-center justify-between gap-3 border-b">
+                            <div class="flex flex-wrap items-center gap-2">
+                                <button @click="bukaForm('siswa')" class="bg-ywka-green hover:bg-green-700 text-white px-3.5 py-2 text-xs md:text-sm rounded-lg shadow font-bold flex items-center gap-2 transition-all hover:scale-105 active:scale-95">
+                                    <i class="fas fa-user-plus"></i>
+                                    <span>Daftarkan Siswa</span>
+                                </button>
+                                <label class="bg-emerald-600 hover:bg-emerald-700 text-white px-3.5 py-2 text-xs md:text-sm rounded-lg shadow font-bold cursor-pointer flex items-center gap-2 transition-all hover:scale-105 active:scale-95" title="Upload data siswa dari file Excel (.xlsx / .xls / .csv)">
+                                    <i class="fas fa-file-excel"></i>
+                                    <span>Upload Excel Siswa</span>
+                                    <input type="file" accept=".xlsx, .xls, .csv" @change="prosesUploadExcelSiswa" class="hidden">
+                                </label>
+                                <button @click="unduhFormatExcelSiswa" class="bg-white hover:bg-gray-100 text-gray-700 border border-gray-300 px-3 py-2 text-xs md:text-sm rounded-lg font-semibold flex items-center gap-1.5 shadow-sm transition-colors" title="Download template format file Excel data siswa">
+                                    <i class="fas fa-download text-emerald-600"></i>
+                                    <span>Format Excel</span>
+                                </button>
+                                <button @click="bukaBatchFotoModal" class="bg-ywka-blue hover:bg-blue-800 text-white px-3.5 py-2 text-xs md:text-sm rounded-lg shadow font-bold flex items-center gap-2 transition-all hover:scale-105 active:scale-95" title="Upload banyak foto siswa sekaligus berdasarkan nama file = nama siswa">
+                                    <i class="fas fa-images"></i>
+                                    <span>Upload Batch Foto</span>
+                                </button>
+                            </div>
+                            <div class="text-xs text-gray-500 font-medium">
+                                Total Siswa: <b class="text-ywka-blue font-bold">{{ filteredSiswa.length }}</b> dari {{ dataSiswa.length }}
+                            </div>
+                        </div>
                         <div class="overflow-x-auto flex-1">
                             <table class="w-full text-left text-sm whitespace-nowrap"><thead class="bg-gray-100"><tr><th class="px-4 py-3 text-center">Foto</th><th class="px-4 py-3">NIS</th><th class="px-4 py-3">Nama</th><th class="px-4 py-3">Kelas</th><th class="px-4 py-3">No HP</th><th class="px-4 py-3">Status</th><th class="px-4 py-3 text-center">Aksi</th></tr></thead>
                                 <tbody>
@@ -288,6 +313,7 @@
                                         <td class="px-4 py-3"><span :class="siswa.Status === 'Aktif' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'" class="px-2 py-1 rounded text-xs font-bold">{{ siswa.Status }}</span></td>
                                         <td class="px-4 py-3 text-center"><button @click="cetakKartuSiswa(siswa)" class="bg-ywka-blue text-white px-2 py-1 rounded shadow text-xs mr-2"><i class="fas fa-id-card"></i> Cetak</button><button @click="editSiswa(siswa)" class="text-blue-500 bg-blue-50 p-1.5 rounded mr-1"><i class="fas fa-edit"></i></button><button @click="hapusData('siswa', 'NIS', siswa.NIS)" class="text-red-500 bg-red-50 p-1.5 rounded"><i class="fas fa-trash"></i></button></td>
                                     </tr>
+                                    <tr v-if="filteredSiswa.length === 0"><td colspan="7" class="text-center py-8 text-gray-500">Belum ada data siswa. Silakan daftarkan manual atau upload file Excel.</td></tr>
                                 </tbody>
                             </table>
                         </div>
@@ -488,7 +514,7 @@
 
             <!-- AREA MODAL FORM POPUP -->
             <div v-if="showModal" class="absolute inset-0 bg-black bg-opacity-60 flex justify-center items-center z-50 p-4">
-                <div class="bg-white rounded-xl shadow-2xl p-5 w-full max-w-xl border-t-8 border-ywka-blue relative max-h-[90vh] overflow-y-auto">
+                <div class="bg-white rounded-xl shadow-2xl p-5 w-full border-t-8 border-ywka-blue relative max-h-[90vh] overflow-y-auto transition-all" :class="(modalType === 'previewLegacy' || modalType === 'previewExcelSiswa' || modalType === 'batchFoto') ? 'max-w-4xl' : 'max-w-xl'">
                     <button @click="showModal = false" class="absolute top-4 right-4 text-gray-400 text-2xl hover:text-gray-600 z-10"><i class="fas fa-times"></i></button>
                     
                     <!-- Pop-up Detail Buku -->
@@ -547,11 +573,42 @@
                     <!-- Modal Buku -->
                     <form v-if="modalType === 'buku'" @submit.prevent="simpanBuku" class="space-y-3 mt-4">
                         <h3 class="font-bold text-lg mb-4">{{ isEditMode ? 'Edit Buku' : 'Tambah Buku' }}</h3>
-                        <div class="grid grid-cols-2 gap-3"><div><label class="text-xs font-bold">ID / ISBN</label><input type="text" v-model="formBuku.kode" required class="w-full border rounded p-2" :readonly="isEditMode"></div><div><label class="text-xs font-bold">Kategori</label><input type="text" v-model="formBuku.kategori" required class="w-full border rounded p-2"></div></div>
-                        <div><label class="text-xs font-bold">Judul Buku</label><input type="text" v-model="formBuku.judul" required class="w-full border rounded p-2"></div>
-                        <div><label class="text-xs font-bold">Pengarang</label><input type="text" v-model="formBuku.pengarang" required class="w-full border rounded p-2"></div>
-                        <div class="grid grid-cols-2 gap-3"><div><label class="text-xs font-bold">Penerbit</label><input type="text" v-model="formBuku.penerbit" required class="w-full border rounded p-2"></div><div><label class="text-xs font-bold">Tahun</label><input type="number" v-model="formBuku.tahun" required class="w-full border rounded p-2"></div></div>
-                        <div class="grid grid-cols-2 gap-3"><div><label class="text-xs font-bold">Rak</label><input type="text" v-model="formBuku.rak" required class="w-full border rounded p-2"></div><div><label class="text-xs font-bold">Stok</label><input type="number" v-model="formBuku.stok" required class="w-full border rounded p-2"></div></div>
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <div class="flex items-center justify-between mb-1">
+                                    <label class="text-xs font-bold text-gray-700">ID / ISBN</label>
+                                    <label v-if="!isEditMode" class="text-[11px] text-blue-600 hover:text-blue-800 font-semibold cursor-pointer flex items-center gap-1" title="Scan Barcode / Teks ISBN dari foto atau jepret kamera">
+                                        <i class="fas fa-camera"></i> <span>Scan Foto</span>
+                                        <input type="file" accept="image/*" @change="deteksiIsbnLangsung" class="hidden">
+                                    </label>
+                                </div>
+                                <input type="text" v-model="formBuku.kode" required class="w-full border rounded p-2 text-sm" placeholder="Contoh: 978602..." :readonly="isEditMode">
+                                
+                                <!-- Status Deteksi ISBN -->
+                                <div v-if="isbnScanStatus.loading" class="text-[11px] text-blue-600 font-medium mt-1 flex items-center gap-1.5 bg-blue-50 p-1.5 rounded border border-blue-200">
+                                    <i class="fas fa-spinner fa-spin"></i> <span>{{ isbnScanStatus.message }}</span>
+                                </div>
+                                <div v-if="isbnScanStatus.success" class="text-[11px] text-green-700 font-semibold mt-1 bg-green-50 p-1.5 rounded border border-green-200 flex flex-col gap-1">
+                                    <div class="flex items-center justify-between">
+                                        <span><i class="fas fa-check-circle mr-1"></i>ISBN: <b>{{ formBuku.kode }}</b></span>
+                                        <button v-if="!formBuku.judul" type="button" @click="isiOtomatisDariGoogleBooks" class="text-[10px] text-blue-700 underline font-bold hover:text-blue-900">
+                                            <i class="fas fa-magic mr-0.5"></i>Isi Data Buku
+                                        </button>
+                                    </div>
+                                </div>
+                                <div v-if="isbnScanStatus.message && !isbnScanStatus.loading && !isbnScanStatus.success" class="text-[11px] text-amber-800 mt-1 bg-amber-50 p-1.5 rounded border border-amber-200">
+                                    <i class="fas fa-info-circle mr-1 text-amber-600"></i>{{ isbnScanStatus.message }}
+                                </div>
+                            </div>
+                            <div>
+                                <label class="text-xs font-bold block mb-1">Kategori</label>
+                                <input type="text" v-model="formBuku.kategori" required class="w-full border rounded p-2 text-sm" placeholder="Contoh: Pelajaran / Fiksi">
+                            </div>
+                        </div>
+                        <div><label class="text-xs font-bold">Judul Buku</label><input type="text" v-model="formBuku.judul" required class="w-full border rounded p-2 text-sm"></div>
+                        <div><label class="text-xs font-bold">Pengarang</label><input type="text" v-model="formBuku.pengarang" required class="w-full border rounded p-2 text-sm"></div>
+                        <div class="grid grid-cols-2 gap-3"><div><label class="text-xs font-bold">Penerbit</label><input type="text" v-model="formBuku.penerbit" required class="w-full border rounded p-2 text-sm"></div><div><label class="text-xs font-bold">Tahun</label><input type="number" v-model="formBuku.tahun" required class="w-full border rounded p-2 text-sm"></div></div>
+                        <div class="grid grid-cols-2 gap-3"><div><label class="text-xs font-bold">Rak</label><input type="text" v-model="formBuku.rak" required class="w-full border rounded p-2 text-sm"></div><div><label class="text-xs font-bold">Stok</label><input type="number" v-model="formBuku.stok" required class="w-full border rounded p-2 text-sm"></div></div>
                         
                         <!-- Input Sinopsis dengan Tombol AI / Auto-Generate -->
                         <div>
@@ -564,8 +621,22 @@
                             <textarea v-model="formBuku.sinopsis" rows="3" placeholder="Sinopsis atau ringkasan cerita buku (klik tombol 'Buat Sinopsis Otomatis' agar terisi otomatis)..." class="w-full border rounded p-2 text-xs text-gray-700 focus:outline-none focus:ring-1 focus:ring-ywka-blue"></textarea>
                         </div>
 
-                        <div class="border p-2 bg-gray-50 rounded"><label class="text-xs font-bold block mb-1">Kamera / File Cover</label><input type="file" @change="e => prosesUploadStorage(e, 'buku')" accept="image/*" class="text-xs"><div v-if="formBuku.Gambar" class="mt-2 text-xs text-green-600 font-bold"><i class="fas fa-check"></i> Foto siap</div></div>
-                        <button type="submit" class="w-full bg-ywka-blue text-white py-2 rounded font-bold mt-2">Simpan</button>
+                        <div class="border p-2.5 bg-gray-50 rounded-lg">
+                            <div class="flex items-center justify-between mb-1">
+                                <label class="text-xs font-bold text-gray-700">Kamera / File Cover Buku</label>
+                                <span class="text-[10px] text-ywka-orange font-semibold flex items-center gap-1">
+                                    <i class="fas fa-barcode"></i> Otomatis isi ISBN dari foto
+                                </span>
+                            </div>
+                            <input type="file" @change="e => prosesUploadStorage(e, 'buku')" accept="image/*" class="text-xs block w-full text-gray-600">
+                            <div v-if="formBuku.Gambar && formBuku.Gambar !== 'pending'" class="mt-2 text-xs text-green-600 font-bold flex items-center gap-1">
+                                <i class="fas fa-check-circle"></i> Foto cover tersimpan
+                            </div>
+                            <div v-else-if="formBuku.Gambar === 'pending'" class="mt-2 text-xs text-blue-600 font-bold flex items-center gap-1">
+                                <i class="fas fa-image"></i> Foto siap diunggah saat disimpan
+                            </div>
+                        </div>
+                        <button type="submit" class="w-full bg-ywka-blue hover:bg-blue-800 text-white py-2.5 rounded-lg font-bold mt-2 shadow transition-colors">Simpan Buku</button>
                     </form>
                     <!-- Modal Bulk Edit Rak (Massal) -->
                     <form v-if="modalType === 'bulkRak'" @submit.prevent="simpanBulkRak" class="space-y-4 mt-4">
@@ -746,6 +817,209 @@
                             </button>
                         </div>
                     </div>
+
+                    <!-- Modal Preview Upload Excel Siswa -->
+                    <div v-if="modalType === 'previewExcelSiswa'" class="space-y-4 mt-2">
+                        <div class="flex items-center gap-2 text-emerald-800 font-bold text-lg border-b pb-2">
+                            <i class="fas fa-file-excel text-emerald-600 text-xl"></i>
+                            <span>Konfirmasi Impor Data Siswa Excel</span>
+                        </div>
+                        <div class="bg-emerald-50 border border-emerald-200 text-emerald-900 p-3 rounded-lg text-xs leading-relaxed flex flex-col md:flex-row md:items-center justify-between gap-2">
+                            <div>
+                                <p>File: <b class="font-mono text-emerald-800">{{ previewExcelSiswaInfo.fileName }}</b></p>
+                                <p class="mt-1">Ditemukan <b class="text-base text-emerald-700 font-bold">{{ previewExcelSiswaData.length }}</b> baris data siswa yang siap dimasukkan ke database.</p>
+                            </div>
+                            <div class="text-[11px] text-gray-500">
+                                <span class="bg-white border border-emerald-300 text-emerald-800 px-2.5 py-1 rounded shadow-sm inline-block font-semibold">
+                                    <i class="fas fa-sync-alt mr-1"></i> Data dengan NIS sama akan diperbarui otomatis
+                                </span>
+                            </div>
+                        </div>
+
+                        <!-- Pratinjau Tabel Siswa -->
+                        <div>
+                            <p class="text-xs font-bold text-gray-700 mb-1.5">Pratinjau Data (Maks. 8 baris pertama):</p>
+                            <div class="overflow-x-auto border rounded-lg max-h-56">
+                                <table class="w-full text-left text-xs whitespace-nowrap">
+                                    <thead class="bg-gray-100 text-gray-700 font-semibold sticky top-0">
+                                        <tr>
+                                            <th class="p-2 text-center">No</th>
+                                            <th class="p-2">NIS</th>
+                                            <th class="p-2">Nama Lengkap</th>
+                                            <th class="p-2 text-center">Kelas</th>
+                                            <th class="p-2 text-center">No HP / WA</th>
+                                            <th class="p-2 text-center">Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr v-for="(s, i) in previewExcelSiswaData.slice(0, 8)" :key="i" class="border-b hover:bg-gray-50">
+                                            <td class="p-2 text-center font-mono text-gray-500">{{ i + 1 }}</td>
+                                            <td class="p-2 font-mono font-bold text-gray-700">{{ s.NIS }}</td>
+                                            <td class="p-2 font-bold text-ywka-blue">{{ s.Nama }}</td>
+                                            <td class="p-2 text-center"><span class="bg-blue-50 text-blue-700 px-2 py-0.5 rounded font-semibold border">{{ s.Kelas }}</span></td>
+                                            <td class="p-2 text-center font-mono text-gray-600">{{ s.NoHP || '-' }}</td>
+                                            <td class="p-2 text-center">
+                                                <span :class="s.Status === 'Aktif' ? 'bg-green-100 text-green-700 border-green-200' : 'bg-red-100 text-red-700 border-red-200'" class="border px-2 py-0.5 rounded text-[10px] font-bold">
+                                                    {{ s.Status }}
+                                                </span>
+                                            </td>
+                                        </tr>
+                                        <tr v-if="previewExcelSiswaData.length > 8">
+                                            <td colspan="6" class="p-2 text-center text-gray-500 italic bg-gray-50">
+                                                ... dan {{ previewExcelSiswaData.length - 8 }} data siswa lainnya
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <div class="flex gap-2 justify-end pt-3 border-t">
+                            <button type="button" @click="showModal = false" class="bg-gray-200 hover:bg-gray-300 text-gray-700 px-4 py-2 rounded-lg text-xs font-bold transition-colors">
+                                Batal
+                            </button>
+                            <button type="button" @click="eksekusiSimpanExcelSiswa" :disabled="loading" class="bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2 rounded-lg text-xs font-bold shadow flex items-center gap-1.5 transition-colors disabled:opacity-50">
+                                <i class="fas" :class="loading ? 'fa-spinner fa-spin' : 'fa-check'"></i>
+                                <span>Simpan {{ previewExcelSiswaData.length }} Siswa ke Database</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Modal Batch Upload Foto Siswa -->
+                    <div v-if="modalType === 'batchFoto'" class="space-y-4 mt-2">
+                        <div class="flex items-center justify-between border-b pb-2">
+                            <div class="flex items-center gap-2 text-ywka-blue font-bold text-lg">
+                                <i class="fas fa-images text-ywka-orange text-xl"></i>
+                                <span>Upload Batch Foto Siswa Sekaligus</span>
+                            </div>
+                            <span class="text-xs text-gray-500 hidden sm:inline">Pencocokan: Nama File = Nama Siswa</span>
+                        </div>
+
+                        <!-- Panduan Penamaan File -->
+                        <div class="bg-blue-50 border border-blue-200 text-blue-900 p-3 rounded-xl text-xs leading-relaxed space-y-1">
+                            <div class="flex items-center gap-1.5 font-bold text-blue-800">
+                                <i class="fas fa-info-circle text-ywka-blue"></i>
+                                <span>Petunjuk Penamaan File Foto:</span>
+                            </div>
+                            <p>
+                                1. Beri nama file foto sesuai dengan <b>Nama Siswa</b> (contoh: <code class="bg-white px-1.5 py-0.5 rounded border border-blue-200 font-mono text-blue-900 font-bold">Ahmad Pratama.jpg</code>) atau <b>NIS Siswa</b> (contoh: <code class="bg-white px-1.5 py-0.5 rounded border border-blue-200 font-mono text-blue-900 font-bold">10241.jpg</code>).
+                            </p>
+                            <p>
+                                2. Pilih banyak foto sekaligus. Sistem akan mencocokkan otomatis ke database siswa. Jika ada foto yang belum cocok, Anda dapat memilih siswa secara langsung dari dropdown tanpa harus mengubah nama file.
+                            </p>
+                        </div>
+
+                        <!-- Dropzone / Input Multi File -->
+                        <div class="border-2 border-dashed border-gray-300 hover:border-ywka-blue rounded-xl p-5 text-center bg-gray-50 hover:bg-blue-50/40 transition-colors cursor-pointer" @click="$refs.batchFotoInputRef.click()">
+                            <i class="fas fa-cloud-upload-alt text-3xl text-ywka-blue mb-1.5"></i>
+                            <p class="font-bold text-sm text-gray-800">Klik di sini untuk memilih banyak foto siswa sekaligus</p>
+                            <p class="text-[11px] text-gray-500 mt-0.5">Mendukung format JPG, PNG, WEBP, JPEG. Anda dapat memilih puluhan hingga ratusan foto sekaligus.</p>
+                            <input type="file" ref="batchFotoInputRef" multiple accept="image/*" @change="handleBatchFotoChange" class="hidden">
+                        </div>
+
+                        <!-- Progress Bar saat Mengunggah -->
+                        <div v-if="batchFotoUploading" class="bg-white border rounded-xl p-4 shadow-sm space-y-2">
+                            <div class="flex justify-between items-center text-xs">
+                                <span class="font-bold text-ywka-blue flex items-center gap-1.5">
+                                    <i class="fas fa-spinner fa-spin"></i>
+                                    <span>Mengunggah Foto Siswa: {{ batchFotoProgress.current }} dari {{ batchFotoProgress.total }}</span>
+                                </span>
+                                <span class="font-mono font-bold text-gray-700">{{ batchFotoProgress.percent }}%</span>
+                            </div>
+                            <div class="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden">
+                                <div class="bg-ywka-blue h-2.5 rounded-full transition-all duration-200" :style="{ width: batchFotoProgress.percent + '%' }"></div>
+                            </div>
+                            <p class="text-[11px] text-gray-500 font-mono truncate">{{ batchFotoProgress.currentName }}</p>
+                        </div>
+
+                        <!-- Daftar Foto Terpilih & Hasil Pencocokan -->
+                        <div v-if="batchFotoList.length > 0" class="space-y-3">
+                            <!-- Tab Statistik & Filter -->
+                            <div class="flex flex-wrap items-center justify-between gap-2">
+                                <div class="flex gap-1.5 bg-gray-100 p-1 rounded-lg text-xs">
+                                    <button type="button" @click="batchFotoFilter = 'all'" :class="batchFotoFilter === 'all' ? 'bg-white shadow text-gray-800 font-bold' : 'text-gray-600 hover:text-gray-900'" class="px-2.5 py-1 rounded transition-colors">
+                                        Semua Foto ({{ batchFotoStats.total }})
+                                    </button>
+                                    <button type="button" @click="batchFotoFilter = 'matched'" :class="batchFotoFilter === 'matched' ? 'bg-green-600 text-white shadow font-bold' : 'text-gray-600 hover:text-green-700'" class="px-2.5 py-1 rounded transition-colors flex items-center gap-1">
+                                        <i class="fas fa-check-circle"></i> Cocok ({{ batchFotoStats.matched }})
+                                    </button>
+                                    <button type="button" @click="batchFotoFilter = 'unmatched'" :class="batchFotoFilter === 'unmatched' ? 'bg-amber-600 text-white shadow font-bold' : 'text-gray-600 hover:text-amber-700'" class="px-2.5 py-1 rounded transition-colors flex items-center gap-1">
+                                        <i class="fas fa-exclamation-triangle"></i> Belum Cocok ({{ batchFotoStats.unmatched }})
+                                    </button>
+                                </div>
+                                <span class="text-xs text-gray-500">
+                                    <b class="text-green-600 font-bold">{{ batchFotoStats.matched }} foto</b> siap diunggah
+                                </span>
+                            </div>
+
+                            <!-- Tabel Pratinjau Foto -->
+                            <div class="overflow-x-auto border rounded-xl max-h-64 overflow-y-auto">
+                                <table class="w-full text-left text-xs whitespace-nowrap">
+                                    <thead class="bg-gray-100 text-gray-700 font-semibold sticky top-0 z-10">
+                                        <tr>
+                                            <th class="p-2 text-center w-12">Foto</th>
+                                            <th class="p-2">Nama File</th>
+                                            <th class="p-2">Dicocokkan ke Siswa</th>
+                                            <th class="p-2 text-center w-24">Status</th>
+                                            <th class="p-2 text-center w-12">Hapus</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="divide-y">
+                                        <tr v-for="(item, idx) in filteredBatchFotoList" :key="idx" class="hover:bg-gray-50">
+                                            <td class="p-2 text-center">
+                                                <img :src="item.previewUrl" class="w-9 h-11 object-cover rounded border shadow-sm mx-auto">
+                                            </td>
+                                            <td class="p-2 font-mono text-gray-700 max-w-[150px] truncate" :title="item.fileName">
+                                                {{ item.fileName }}
+                                            </td>
+                                            <td class="p-2 min-w-[220px]">
+                                                <!-- Dropdown Pemilihan Siswa -->
+                                                <select v-model="item.matchedSiswa" class="w-full border rounded p-1.5 text-xs focus:ring-1 focus:ring-ywka-blue outline-none" :class="item.matchedSiswa ? 'bg-white text-gray-800 font-medium' : 'bg-amber-50 text-amber-900 border-amber-300 font-semibold'">
+                                                    <option :value="null">-- Tidak Cocok (Pilih Siswa) --</option>
+                                                    <option v-for="s in dataSiswa" :key="s.NIS" :value="s">
+                                                        {{ s.Nama }} ({{ s.NIS }} - {{ s.Kelas }})
+                                                    </option>
+                                                </select>
+                                            </td>
+                                            <td class="p-2 text-center">
+                                                <span v-if="item.uploadState === 'uploading'" class="text-blue-600 font-bold flex items-center justify-center gap-1 text-[11px]">
+                                                    <i class="fas fa-spinner fa-spin"></i> Unggah...
+                                                </span>
+                                                <span v-else-if="item.uploadState === 'success'" class="bg-green-100 text-green-700 border border-green-200 px-2 py-0.5 rounded text-[10px] font-bold">
+                                                    Selesai
+                                                </span>
+                                                <span v-else-if="item.uploadState === 'error'" class="bg-red-100 text-red-700 border border-red-200 px-2 py-0.5 rounded text-[10px] font-bold">
+                                                    Gagal
+                                                </span>
+                                                <span v-else-if="item.matchedSiswa" class="bg-green-100 text-green-700 border border-green-200 px-2 py-0.5 rounded text-[10px] font-bold">
+                                                    Cocok
+                                                </span>
+                                                <span v-else class="bg-amber-100 text-amber-700 border border-amber-200 px-2 py-0.5 rounded text-[10px] font-bold">
+                                                    Lewati
+                                                </span>
+                                            </td>
+                                            <td class="p-2 text-center">
+                                                <button type="button" @click="hapusItemBatchFoto(idx)" :disabled="batchFotoUploading" class="text-red-500 hover:text-red-700 p-1" title="Hapus foto ini dari daftar upload">
+                                                    <i class="fas fa-trash-alt"></i>
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- Tombol Aksi Modal -->
+                        <div class="flex gap-2 justify-end pt-3 border-t">
+                            <button type="button" @click="showModal = false" :disabled="batchFotoUploading" class="bg-gray-200 hover:bg-gray-300 text-gray-700 px-4 py-2 rounded-lg text-xs font-bold transition-colors">
+                                Tutup
+                            </button>
+                            <button type="button" @click="eksekusiUploadBatchFoto" :disabled="batchFotoUploading || batchFotoStats.matched === 0" class="bg-ywka-blue hover:bg-blue-800 text-white px-5 py-2.5 rounded-lg text-xs md:text-sm font-bold shadow flex items-center gap-2 transition-colors disabled:opacity-50">
+                                <i class="fas" :class="batchFotoUploading ? 'fa-spinner fa-spin' : 'fa-upload'"></i>
+                                <span>Upload & Simpan {{ batchFotoStats.matched }} Foto Siswa</span>
+                            </button>
+                        </div>
+                    </div>
                     
                     <!-- Modal User -->
                     <form v-if="modalType === 'user'" @submit.prevent="simpanUser" class="space-y-4 mt-4">
@@ -779,6 +1053,38 @@
                 const showModal = ref(false); const modalType = ref('buku'); const isEditMode = ref(false); const selectedBuku = ref(null);
                 
                 const formBuku = ref({ kode: '', judul: '', pengarang: '', penerbit: '', tahun: '', kategori: '', rak: '', stok: 1, Gambar: '', sinopsis: '', file: null }); 
+                
+                // STATUS DETEKSI & AUTOFILL ISBN DARI FOTO
+                const isbnScanStatus = ref({ loading: false, success: false, message: '' });
+                const googleBooksFoundData = ref(null);
+
+                // IMPORT EXCEL SISWA
+                const previewExcelSiswaData = ref([]);
+                const previewExcelSiswaInfo = ref({ fileName: '', total: 0 });
+
+                // BATCH UPLOAD FOTO SISWA
+                const batchFotoList = ref([]);
+                const batchFotoUploading = ref(false);
+                const batchFotoProgress = ref({ current: 0, total: 0, percent: 0, currentName: '' });
+                const batchFotoFilter = ref('all');
+
+                const filteredBatchFotoList = computed(() => {
+                    if (batchFotoFilter.value === 'matched') {
+                        return batchFotoList.value.filter(item => item.matchedSiswa);
+                    }
+                    if (batchFotoFilter.value === 'unmatched') {
+                        return batchFotoList.value.filter(item => !item.matchedSiswa);
+                    }
+                    return batchFotoList.value;
+                });
+
+                const batchFotoStats = computed(() => {
+                    const total = batchFotoList.value.length;
+                    const matched = batchFotoList.value.filter(item => item.matchedSiswa).length;
+                    const unmatched = total - matched;
+                    return { total, matched, unmatched };
+                });
+
                 // TAMBAHAN UNTUK EDIT MASSAL
                 const selectedBukuIds = ref([]);
                 const formBulkRak = ref('');
@@ -1032,10 +1338,254 @@
                     await supaClient.storage.from('berkas').upload(fName, file);
                     return supaClient.storage.from('berkas').getPublicUrl(fName).data.publicUrl;
                 }
-                const prosesUploadStorage = (e, target) => { 
+                // --- FITUR AUTOFILL ISBN DARI FOTO ---
+                const extractCleanIsbn = (str) => {
+                    if (!str) return null;
+                    const clean = String(str).trim();
+                    const digitsOnly = clean.replace(/[^0-9X]/gi, '');
+                    // Prioritaskan format ISBN-13 (dimulai 978 atau 979 dan 13 digit)
+                    if ((digitsOnly.startsWith('978') || digitsOnly.startsWith('979')) && digitsOnly.length === 13) {
+                        return digitsOnly;
+                    }
+                    if (digitsOnly.length === 13 || digitsOnly.length === 10) {
+                        return digitsOnly;
+                    }
+                    return clean;
+                };
+
+                const extractIsbnFromOcrText = (text) => {
+                    if (!text) return null;
+                    // Pola ISBN-13 (misal: 978-602-xxx-x atau ISBN 978...)
+                    const match13 = text.match(/(?:ISBN(?:-13)?[:\s]*)?(97[89][\s\-]*(?:\d[\s\-]*){9}\d)/i);
+                    if (match13 && match13[1]) {
+                        return match13[1].replace(/[\s\-]/g, '');
+                    }
+                    // Pola ISBN-10
+                    const match10 = text.match(/(?:ISBN(?:-10)?[:\s]*)?(\d[\s\-]*(?:\d[\s\-]*){8}[\dXx])/i);
+                    if (match10 && match10[1]) {
+                        return match10[1].replace(/[\s\-]/g, '').toUpperCase();
+                    }
+                    return null;
+                };
+
+                const cariDetailBukuViaIsbn = async (isbn) => {
+                    try {
+                        const cleanDigits = (isbn || '').replace(/[^0-9X]/gi, '');
+                        if (!cleanDigits) return null;
+                        const res = await fetch(`https://www.googleapis.com/books/v1/volumes?q=isbn:${cleanDigits}`);
+                        if (!res.ok) return null;
+                        const data = await res.json();
+                        if (data.items && data.items.length > 0) {
+                            const vol = data.items[0].volumeInfo || {};
+                            return {
+                                judul: vol.title || '',
+                                pengarang: (vol.authors || []).join(', '),
+                                penerbit: vol.publisher || '',
+                                tahun: vol.publishedDate ? parseInt(vol.publishedDate.substring(0, 4)) : '',
+                                kategori: (vol.categories || [])[0] || '',
+                                sinopsis: vol.description || ''
+                            };
+                        }
+                    } catch (e) {
+                        console.warn("Gagal fetch info buku dari Google Books:", e);
+                    }
+                    return null;
+                };
+
+                const isiOtomatisDariGoogleBooks = async () => {
+                    if (!formBuku.value.kode) {
+                        alert("Harap masukkan atau scan ISBN terlebih dahulu!");
+                        return;
+                    }
+                    isbnScanStatus.value = { loading: true, success: false, message: 'Mengambil data buku dari Google Books...' };
+                    const meta = await cariDetailBukuViaIsbn(formBuku.value.kode);
+                    if (meta && meta.judul) {
+                        googleBooksFoundData.value = meta;
+                        formBuku.value.judul = meta.judul;
+                        if (meta.pengarang) formBuku.value.pengarang = meta.pengarang;
+                        if (meta.penerbit) formBuku.value.penerbit = meta.penerbit;
+                        if (meta.tahun) formBuku.value.tahun = meta.tahun;
+                        if (meta.kategori && !formBuku.value.kategori) formBuku.value.kategori = meta.kategori;
+                        if (meta.sinopsis && !formBuku.value.sinopsis) formBuku.value.sinopsis = meta.sinopsis;
+                        isbnScanStatus.value = { 
+                            loading: false, 
+                            success: true, 
+                            message: `Data '${meta.judul}' berhasil diisikan otomatis!` 
+                        };
+                    } else {
+                        isbnScanStatus.value = { 
+                            loading: false, 
+                            success: false, 
+                            message: 'Data buku tidak ditemukan di Google Books. Anda dapat melengkapinya manual.' 
+                        };
+                    }
+                };
+
+                const deteksiDanAutofillIsbn = async (file) => {
+                    if (!file) return;
+                    isbnScanStatus.value = { loading: true, success: false, message: 'Memindai barcode/ISBN dari foto...' };
+                    googleBooksFoundData.value = null;
+
+                    try {
+                        const imgUrl = URL.createObjectURL(file);
+                        const img = new Image();
+                        await new Promise((resolve, reject) => {
+                            img.onload = resolve;
+                            img.onerror = reject;
+                            img.src = imgUrl;
+                        });
+
+                        let foundIsbn = null;
+
+                        // Langkah 1: Native BarcodeDetector (Browser Hardware Acceleration)
+                        if ('BarcodeDetector' in window) {
+                            try {
+                                const detector = new BarcodeDetector({ 
+                                    formats: ['ean_13', 'code_128', 'ean_8', 'upc_a', 'upc_e', 'qr_code'] 
+                                });
+                                const barcodes = await detector.detect(img);
+                                if (barcodes && barcodes.length > 0) {
+                                    const candidate = barcodes.find(b => {
+                                        const v = (b.rawValue || '').replace(/[^0-9X]/gi, '');
+                                        return (v.startsWith('978') || v.startsWith('979')) && v.length === 13;
+                                    }) || barcodes.find(b => {
+                                        const v = (b.rawValue || '').replace(/[^0-9X]/gi, '');
+                                        return v.length === 10 || v.length === 13;
+                                    }) || barcodes[0];
+
+                                    if (candidate && candidate.rawValue) {
+                                        foundIsbn = extractCleanIsbn(candidate.rawValue);
+                                    }
+                                }
+                            } catch (bdErr) {
+                                console.warn("BarcodeDetector error:", bdErr);
+                            }
+                        }
+
+                        // Langkah 2: Pustaka ZXing Reader (Multiformat & Multi-angle)
+                        if (!foundIsbn && window.ZXing) {
+                            try {
+                                const codeReader = new ZXing.BrowserMultiFormatReader();
+                                try {
+                                    const zxRes = await codeReader.decodeFromImageElement(img);
+                                    if (zxRes && zxRes.getText()) {
+                                        foundIsbn = extractCleanIsbn(zxRes.getText());
+                                    }
+                                } catch (zErr) {}
+
+                                // Coba canvas rotasi & normalisasi ukuran jika belum ketemu
+                                if (!foundIsbn) {
+                                    const canvas = document.createElement('canvas');
+                                    const maxDim = 1200;
+                                    let w = img.naturalWidth || img.width;
+                                    let h = img.naturalHeight || img.height;
+                                    if (w > maxDim || h > maxDim) {
+                                        if (w > h) { h = Math.round((h * maxDim) / w); w = maxDim; }
+                                        else { w = Math.round((w * maxDim) / h); h = maxDim; }
+                                    }
+                                    canvas.width = w;
+                                    canvas.height = h;
+                                    const ctx = canvas.getContext('2d');
+                                    ctx.drawImage(img, 0, 0, w, h);
+
+                                    try {
+                                        const cRes = await codeReader.decodeFromCanvas(canvas);
+                                        if (cRes && cRes.getText()) {
+                                            foundIsbn = extractCleanIsbn(cRes.getText());
+                                        }
+                                    } catch (cErr) {}
+
+                                    if (!foundIsbn) {
+                                        for (const deg of [90, 270, 180]) {
+                                            const rCanvas = document.createElement('canvas');
+                                            rCanvas.width = (deg === 90 || deg === 270) ? h : w;
+                                            rCanvas.height = (deg === 90 || deg === 270) ? w : h;
+                                            const rCtx = rCanvas.getContext('2d');
+                                            rCtx.translate(rCanvas.width / 2, rCanvas.height / 2);
+                                            rCtx.rotate((deg * Math.PI) / 180);
+                                            rCtx.drawImage(canvas, -w / 2, -h / 2);
+
+                                            try {
+                                                const rRes = await codeReader.decodeFromCanvas(rCanvas);
+                                                if (rRes && rRes.getText()) {
+                                                    foundIsbn = extractCleanIsbn(rRes.getText());
+                                                    break;
+                                                }
+                                            } catch (e) {}
+                                        }
+                                    }
+                                }
+                            } catch (zxErr) {
+                                console.warn("ZXing error:", zxErr);
+                            }
+                        }
+
+                        // Langkah 3: OCR Teks ISBN jika barcode tidak ditemukan
+                        if (!foundIsbn && window.Tesseract) {
+                            isbnScanStatus.value = { loading: true, success: false, message: 'Barcode belum terbaca, mencoba mengenali teks ISBN (OCR)...' };
+                            try {
+                                const { data: { text } } = await Tesseract.recognize(img, 'eng');
+                                const ocrIsbn = extractIsbnFromOcrText(text);
+                                if (ocrIsbn) {
+                                    foundIsbn = ocrIsbn;
+                                }
+                            } catch (ocrErr) {
+                                console.warn("OCR recognition error:", ocrErr);
+                            }
+                        }
+
+                        URL.revokeObjectURL(imgUrl);
+
+                        if (foundIsbn) {
+                            formBuku.value.kode = foundIsbn;
+                            isbnScanStatus.value = { 
+                                loading: false, 
+                                success: true, 
+                                message: `ISBN ${foundIsbn} berhasil terdeteksi!` 
+                            };
+
+                            // Auto-fetch data buku dari Google Books jika judul masih kosong
+                            if (!formBuku.value.judul) {
+                                const bookMeta = await cariDetailBukuViaIsbn(foundIsbn);
+                                if (bookMeta && bookMeta.judul) {
+                                    googleBooksFoundData.value = bookMeta;
+                                    formBuku.value.judul = bookMeta.judul;
+                                    if (bookMeta.pengarang) formBuku.value.pengarang = bookMeta.pengarang;
+                                    if (bookMeta.penerbit) formBuku.value.penerbit = bookMeta.penerbit;
+                                    if (bookMeta.tahun) formBuku.value.tahun = bookMeta.tahun;
+                                    if (bookMeta.kategori && !formBuku.value.kategori) formBuku.value.kategori = bookMeta.kategori;
+                                    if (bookMeta.sinopsis && !formBuku.value.sinopsis) formBuku.value.sinopsis = bookMeta.sinopsis;
+                                }
+                            }
+                        } else {
+                            isbnScanStatus.value = { 
+                                loading: false, 
+                                success: false, 
+                                message: 'Barcode/ISBN tidak terdeteksi di foto ini. Anda dapat mengisinya manual atau memotret barcode lebih dekat.' 
+                            };
+                        }
+                    } catch (err) {
+                        console.error("Gagal scan ISBN:", err);
+                        isbnScanStatus.value = { loading: false, success: false, message: 'Gagal memproses foto untuk deteksi ISBN.' };
+                    }
+                };
+
+                const deteksiIsbnLangsung = async (e) => {
+                    const file = e.target.files[0];
+                    if (!file) return;
+                    await deteksiDanAutofillIsbn(file);
+                    e.target.value = '';
+                };
+
+                const prosesUploadStorage = async (e, target) => { 
                     const file = e.target.files[0]; 
                     if(!file) return; 
-                    if(target==='buku') { formBuku.value.file = file; formBuku.value.Gambar = 'pending'; }
+                    if(target==='buku') { 
+                        formBuku.value.file = file; 
+                        formBuku.value.Gambar = 'pending';
+                        // Pindai ISBN secara otomatis dari foto cover yang diunggah
+                        await deteksiDanAutofillIsbn(file);
+                    }
                     if(target==='siswa') { formSiswa.value.file = file; formSiswa.value.Foto = 'pending'; }
                 }
                 const prosesFileKop = async (e) => {
@@ -1707,6 +2257,282 @@
                     XLSX.writeFile(wb, "Rekap_Data_Peminjaman_Buku_SMA_YWKA.xlsx");
                 };
 
+                // --- FITUR IMPORT DATA SISWA EXCEL ---
+                const unduhFormatExcelSiswa = () => {
+                    if (typeof XLSX === 'undefined') {
+                        alert("Pustaka SheetJS (XLSX) belum termuat.");
+                        return;
+                    }
+                    const templateData = [
+                        ["NIS", "Nama Lengkap", "Kelas", "No HP", "Status"],
+                        ["10241", "Ahmad Pratama", "X MIPA 1", "081234567890", "Aktif"],
+                        ["10242", "Siti Nurhaliza", "XI IPS 2", "081298765432", "Aktif"],
+                        ["10243", "Budi Santoso", "XII MIPA 3", "081345678901", "Aktif"],
+                        ["10244", "Dewi Lestari", "X IPS 1", "081398765432", "Aktif"]
+                    ];
+                    const ws = XLSX.utils.aoa_to_sheet(templateData);
+                    ws['!cols'] = [{ wch: 15 }, { wch: 30 }, { wch: 15 }, { wch: 20 }, { wch: 12 }];
+                    const wb = XLSX.utils.book_new();
+                    XLSX.utils.book_append_sheet(wb, ws, "Data Siswa");
+                    XLSX.writeFile(wb, "Template_Data_Siswa_SMA_YWKA.xlsx");
+                };
+
+                const prosesUploadExcelSiswa = (e) => {
+                    const file = e.target.files[0];
+                    if (!file) return;
+
+                    if (typeof XLSX === 'undefined') {
+                        alert("Pustaka SheetJS (XLSX) belum termuat. Periksa koneksi internet Anda.");
+                        return;
+                    }
+
+                    const reader = new FileReader();
+                    reader.onload = (evt) => {
+                        try {
+                            const data = new Uint8Array(evt.target.result);
+                            const workbook = XLSX.read(data, { type: 'array' });
+                            const sheetName = workbook.SheetNames[0];
+                            const worksheet = workbook.Sheets[sheetName];
+                            const rows = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '' });
+
+                            if (rows.length < 2) {
+                                alert("File Excel kosong atau tidak memiliki baris data siswa.");
+                                return;
+                            }
+
+                            // Cari baris header tabel otomatis dalam 10 baris pertama
+                            let headerIdx = -1;
+                            for (let i = 0; i < Math.min(rows.length, 10); i++) {
+                                const r = rows[i] || [];
+                                const rStr = r.map(c => String(c).toLowerCase()).join(' ');
+                                if ((rStr.includes('nama') || rStr.includes('siswa')) && 
+                                    (rStr.includes('nis') || rStr.includes('kelas') || rStr.includes('hp') || rStr.includes('kontak') || rStr.includes('induk'))) {
+                                    headerIdx = i;
+                                    break;
+                                }
+                            }
+
+                            if (headerIdx === -1) headerIdx = 0;
+                            const headers = (rows[headerIdx] || []).map(h => String(h).trim().toLowerCase());
+
+                            // Deteksi indeks kolom
+                            let colNis = headers.findIndex(h => /nis|nomor.*induk|no.*induk|nisn|id.*siswa/i.test(h));
+                            let colNama = headers.findIndex(h => /nama.*lengkap|nama.*siswa|^nama$/i.test(h));
+                            let colKelas = headers.findIndex(h => /^kelas$|tingkat|rombel/i.test(h));
+                            let colNohp = headers.findIndex(h => /no.*hp|nohp|telepon|hp|kontak|wa|handphone/i.test(h));
+                            let colStatus = headers.findIndex(h => /status/i.test(h));
+
+                            // Fallback urutan kolom jika header tidak spesifik
+                            if (colNis === -1) colNis = 0;
+                            if (colNama === -1) colNama = 1;
+                            if (colKelas === -1) colKelas = 2;
+                            if (colNohp === -1) colNohp = 3;
+                            if (colStatus === -1) colStatus = 4;
+
+                            const parsedSiswa = [];
+                            for (let i = headerIdx + 1; i < rows.length; i++) {
+                                const r = rows[i];
+                                if (!r || r.every(c => !String(c).trim())) continue;
+
+                                let namaVal = colNama !== -1 && r[colNama] ? String(r[colNama]).trim() : '';
+                                if (!namaVal || namaVal.toLowerCase() === 'nama' || namaVal.toLowerCase().includes('data siswa')) continue;
+
+                                let nisVal = colNis !== -1 && r[colNis] ? String(r[colNis]).trim() : '';
+                                if (!nisVal) {
+                                    nisVal = 'SW' + Date.now().toString().slice(-5) + (i - headerIdx);
+                                }
+
+                                let kelasVal = colKelas !== -1 && r[colKelas] ? String(r[colKelas]).trim() : 'Umum';
+                                let nohpVal = colNohp !== -1 && r[colNohp] ? String(r[colNohp]).trim() : '';
+                                let statusVal = colStatus !== -1 && r[colStatus] ? String(r[colStatus]).trim() : 'Aktif';
+                                if (!/aktif|nonaktif/i.test(statusVal)) {
+                                    statusVal = 'Aktif';
+                                } else if (/non/i.test(statusVal)) {
+                                    statusVal = 'Nonaktif';
+                                } else {
+                                    statusVal = 'Aktif';
+                                }
+
+                                parsedSiswa.push({
+                                    NIS: nisVal,
+                                    Nama: namaVal,
+                                    Kelas: kelasVal,
+                                    NoHP: nohpVal,
+                                    Status: statusVal,
+                                    Foto: ''
+                                });
+                            }
+
+                            if (parsedSiswa.length === 0) {
+                                alert("Tidak ada baris data siswa yang valid dalam file Excel tersebut.");
+                                return;
+                            }
+
+                            previewExcelSiswaData.value = parsedSiswa;
+                            previewExcelSiswaInfo.value = { fileName: file.name, total: parsedSiswa.length };
+                            modalType.value = 'previewExcelSiswa';
+                            showModal.value = true;
+                        } catch (err) {
+                            console.error("Gagal membaca Excel siswa:", err);
+                            alert("Gagal membaca file Excel. Pastikan format file valid (.xlsx / .xls / .csv).");
+                        }
+                        e.target.value = '';
+                    };
+                    reader.readAsArrayBuffer(file);
+                };
+
+                const eksekusiSimpanExcelSiswa = async () => {
+                    if (previewExcelSiswaData.value.length === 0) return;
+                    loading.value = true;
+                    try {
+                        const batchSize = 50;
+                        const total = previewExcelSiswaData.value.length;
+                        for (let i = 0; i < total; i += batchSize) {
+                            const batch = previewExcelSiswaData.value.slice(i, i + batchSize);
+                            const { error } = await supaClient.from('siswa').upsert(batch, { onConflict: 'NIS' });
+                            if (error) throw error;
+                        }
+                        alert(`Berhasil mengimpor ${total} data siswa ke database!`);
+                        showModal.value = false;
+                        previewExcelSiswaData.value = [];
+                        await fetchSemuaData();
+                    } catch (err) {
+                        console.error("Gagal menyimpan data siswa:", err);
+                        alert("Gagal menyimpan data siswa ke database: " + (err.message || 'Terjadi kesalahan'));
+                    }
+                    loading.value = false;
+                };
+
+                // --- FITUR UPLOAD BATCH FOTO SISWA ---
+                const bukaBatchFotoModal = () => {
+                    // Bersihkan URL preview sebelumnya jika ada
+                    batchFotoList.value.forEach(item => {
+                        if (item.previewUrl) URL.revokeObjectURL(item.previewUrl);
+                    });
+                    batchFotoList.value = [];
+                    batchFotoUploading.value = false;
+                    batchFotoProgress.value = { current: 0, total: 0, percent: 0, currentName: '' };
+                    batchFotoFilter.value = 'all';
+                    modalType.value = 'batchFoto';
+                    showModal.value = true;
+                };
+
+                const handleBatchFotoChange = (e) => {
+                    const files = Array.from(e.target.files || []);
+                    if (files.length === 0) return;
+
+                    const normalize = (str) => {
+                        return (str || '')
+                            .toLowerCase()
+                            .replace(/[^a-z0-9]/g, ' ')
+                            .replace(/\s+/g, ' ')
+                            .trim();
+                    };
+
+                    const newItems = files.map(file => {
+                        const lastDot = file.name.lastIndexOf('.');
+                        const rawName = lastDot !== -1 ? file.name.substring(0, lastDot) : file.name;
+                        const cleanName = rawName.trim();
+                        const normName = normalize(cleanName);
+
+                        let matched = null;
+
+                        // 1. Cocokkan persis nama
+                        matched = dataSiswa.value.find(s => s.Nama && s.Nama.trim().toLowerCase() === cleanName.toLowerCase());
+
+                        // 2. Cocokkan persis NIS
+                        if (!matched) {
+                            matched = dataSiswa.value.find(s => s.NIS && String(s.NIS).trim().toLowerCase() === cleanName.toLowerCase());
+                        }
+
+                        // 3. Cocokkan nama normalisasi (abaikan tanda titik, tanda strip, atau spasi ganda)
+                        if (!matched) {
+                            matched = dataSiswa.value.find(s => normalize(s.Nama) === normName);
+                        }
+
+                        // 4. Nama file mengandung nama siswa atau nama siswa mengandung nama file
+                        if (!matched && normName.length >= 3) {
+                            matched = dataSiswa.value.find(s => {
+                                const sNorm = normalize(s.Nama);
+                                return sNorm.length >= 3 && (normName.includes(sNorm) || sNorm.includes(normName));
+                            });
+                        }
+
+                        // 5. Nama file diawali atau mengandung NIS siswa
+                        if (!matched) {
+                            matched = dataSiswa.value.find(s => {
+                                const sNis = String(s.NIS || '').trim().toLowerCase();
+                                return sNis.length >= 3 && normName.includes(sNis);
+                            });
+                        }
+
+                        return {
+                            file: file,
+                            fileName: file.name,
+                            cleanName: cleanName,
+                            previewUrl: URL.createObjectURL(file),
+                            matchedSiswa: matched || null,
+                            uploadState: 'pending' // pending, uploading, success, error
+                        };
+                    });
+
+                    batchFotoList.value = [...batchFotoList.value, ...newItems];
+                    e.target.value = '';
+                };
+
+                const hapusItemBatchFoto = (index) => {
+                    const item = batchFotoList.value[index];
+                    if (item && item.previewUrl) URL.revokeObjectURL(item.previewUrl);
+                    batchFotoList.value.splice(index, 1);
+                };
+
+                const eksekusiUploadBatchFoto = async () => {
+                    const itemsToUpload = batchFotoList.value.filter(item => item.matchedSiswa);
+                    if (itemsToUpload.length === 0) {
+                        alert("Tidak ada foto yang memiliki pasangan siswa yang cocok.");
+                        return;
+                    }
+
+                    batchFotoUploading.value = true;
+                    let suksesCount = 0;
+                    let gagalCount = 0;
+                    const total = itemsToUpload.length;
+
+                    for (let i = 0; i < total; i++) {
+                        const item = itemsToUpload[i];
+                        item.uploadState = 'uploading';
+                        batchFotoProgress.value = {
+                            current: i + 1,
+                            total: total,
+                            percent: Math.round(((i + 1) / total) * 100),
+                            currentName: `${item.fileName} -> ${item.matchedSiswa.Nama}`
+                        };
+
+                        try {
+                            const photoUrl = await uploadBerkas(item.file, 'siswa');
+                            if (!photoUrl) throw new Error("Gagal mengunggah berkas foto.");
+
+                            const { error } = await supaClient.from('siswa').update({ Foto: photoUrl }).eq('NIS', item.matchedSiswa.NIS);
+                            if (error) throw error;
+
+                            const localSiswa = dataSiswa.value.find(s => s.NIS === item.matchedSiswa.NIS);
+                            if (localSiswa) localSiswa.Foto = photoUrl;
+
+                            item.uploadState = 'success';
+                            suksesCount++;
+                        } catch (err) {
+                            console.error("Gagal mengunggah foto siswa:", item.fileName, err);
+                            item.uploadState = 'error';
+                            gagalCount++;
+                        }
+                    }
+
+                    batchFotoUploading.value = false;
+                    alert(`Proses Upload Batch Selesai!\n✅ Berhasil: ${suksesCount} foto siswa\n${gagalCount > 0 ? '❌ Gagal: ' + gagalCount + ' foto' : ''}`);
+                    showModal.value = false;
+                    await fetchSemuaData();
+                };
+
                 const hapusSemuaLegacy = async () => {
                     if (dataLegacy.value.length === 0) {
                         alert("Belum ada data legacy yang tersimpan.");
@@ -1804,7 +2630,11 @@
                     modalType.value = tipe; 
                     showModal.value = true; 
                     isEditMode.value = false; 
-                    if(tipe === 'buku') formBuku.value = { kode: '', judul: '', pengarang: '', penerbit: '', tahun: '', kategori: '', rak: '', stok: 1, Gambar: '', sinopsis: '', file: null }; 
+                    if(tipe === 'buku') {
+                        formBuku.value = { kode: '', judul: '', pengarang: '', penerbit: '', tahun: '', kategori: '', rak: '', stok: 1, Gambar: '', sinopsis: '', file: null };
+                        isbnScanStatus.value = { loading: false, success: false, message: '' };
+                        googleBooksFoundData.value = null;
+                    } 
                     if(tipe === 'siswa') formSiswa.value = { nis: '', nama: '', kelas: '', nohp: '', status: 'Aktif', Foto: '', file: null }; 
                     if(tipe === 'transaksi') {
                         searchSiswaDropdown.value = '';
@@ -1825,6 +2655,8 @@
                 const editBuku = (buku) => { 
                     modalType.value = 'buku'; 
                     isEditMode.value = true; 
+                    isbnScanStatus.value = { loading: false, success: false, message: '' };
+                    googleBooksFoundData.value = null; 
                     formBuku.value = { 
                         kode: buku.KodeBuku, 
                         judul: buku.Judul, 
@@ -1919,7 +2751,11 @@
                     getNamaSiswa, getKelas, getKontak, isStatusKembali,
                     cetakFormKosongLandscape, funcPrintLandscape,
                     getSinopsis, autoGenerateSinopsis, sinkronisasiSinopsisSupabase,
-                    filterStatusTransaksi, setujuiPeminjaman, tolakPeminjaman
+                    filterStatusTransaksi, setujuiPeminjaman, tolakPeminjaman,
+                    isbnScanStatus, deteksiIsbnLangsung, deteksiDanAutofillIsbn, isiOtomatisDariGoogleBooks, googleBooksFoundData,
+                    previewExcelSiswaData, previewExcelSiswaInfo, unduhFormatExcelSiswa, prosesUploadExcelSiswa, eksekusiSimpanExcelSiswa,
+                    batchFotoList, filteredBatchFotoList, batchFotoStats, batchFotoUploading, batchFotoProgress, batchFotoFilter,
+                    bukaBatchFotoModal, handleBatchFotoChange, hapusItemBatchFoto, eksekusiUploadBatchFoto
                 }
             }
         }).mount('#app')
