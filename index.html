@@ -1656,9 +1656,32 @@
                 
                 const simpanSiswa = async () => {
                     loading.value = true;
-                    if(formSiswa.value.file) { formSiswa.value.Foto = await uploadBerkas(formSiswa.value.file, 'siswa'); }
-                    await supaClient.from('siswa').upsert({ NIS: formSiswa.value.nis, Nama: formSiswa.value.nama, Kelas: formSiswa.value.kelas, NoHP: formSiswa.value.nohp, Status: formSiswa.value.status, Foto: formSiswa.value.Foto!=='pending'?formSiswa.value.Foto:'' }); 
-                    await fetchSemuaData();
+                    try {
+                        const cleanNis = /^\d+$/.test(String(formSiswa.value.nis).trim()) ? parseInt(String(formSiswa.value.nis).trim(), 10) : String(formSiswa.value.nis).trim();
+                        if(formSiswa.value.file) { formSiswa.value.Foto = await uploadBerkas(formSiswa.value.file, 'siswa'); }
+                        const dataPayload = { 
+                            NIS: cleanNis, 
+                            Nama: formSiswa.value.nama, 
+                            Kelas: formSiswa.value.kelas, 
+                            NoHP: formSiswa.value.nohp || null, 
+                            Status: formSiswa.value.status || 'Aktif' 
+                        };
+                        if (formSiswa.value.Foto && formSiswa.value.Foto !== 'pending') {
+                            dataPayload.Foto = formSiswa.value.Foto;
+                        }
+                        let { error } = await supaClient.from('siswa').upsert(dataPayload);
+                        if (error && error.message && error.message.toLowerCase().includes('foto')) {
+                            delete dataPayload.Foto;
+                            const resRetry = await supaClient.from('siswa').upsert(dataPayload);
+                            error = resRetry.error;
+                        }
+                        if (error) throw error;
+                        await fetchSemuaData();
+                    } catch (err) {
+                        console.error("Gagal simpan siswa:", err);
+                        alert("Gagal menyimpan data siswa: " + (err.message || ''));
+                        loading.value = false;
+                    }
                 }
 
                 const simpanTransaksi = async () => {
@@ -2353,13 +2376,13 @@
                                     statusVal = 'Aktif';
                                 }
 
+                                const cleanNis = /^\d+$/.test(String(nisVal).trim()) ? parseInt(String(nisVal).trim(), 10) : String(nisVal).trim();
                                 parsedSiswa.push({
-                                    NIS: nisVal,
+                                    NIS: cleanNis,
                                     Nama: namaVal,
                                     Kelas: kelasVal,
-                                    NoHP: nohpVal,
-                                    Status: statusVal,
-                                    Foto: ''
+                                    NoHP: nohpVal || null,
+                                    Status: statusVal
                                 });
                             }
 
@@ -2388,8 +2411,25 @@
                         const batchSize = 50;
                         const total = previewExcelSiswaData.value.length;
                         for (let i = 0; i < total; i += batchSize) {
-                            const batch = previewExcelSiswaData.value.slice(i, i + batchSize);
-                            const { error } = await supaClient.from('siswa').upsert(batch, { onConflict: 'NIS' });
+                            const rawBatch = previewExcelSiswaData.value.slice(i, i + batchSize);
+                            // Hanya masukkan field yang pasti ada di Supabase siswa (NIS, Nama, Kelas, NoHP, Status)
+                            const batch = rawBatch.map(s => {
+                                const cleanNis = /^\d+$/.test(String(s.NIS).trim()) ? parseInt(String(s.NIS).trim(), 10) : String(s.NIS).trim();
+                                return {
+                                    NIS: cleanNis,
+                                    Nama: String(s.Nama || '').trim(),
+                                    Kelas: String(s.Kelas || '').trim() || 'Umum',
+                                    NoHP: s.NoHP ? String(s.NoHP).trim() : null,
+                                    Status: s.Status || 'Aktif'
+                                };
+                            });
+
+                            let { error } = await supaClient.from('siswa').upsert(batch, { onConflict: 'NIS' });
+                            if (error) {
+                                console.warn("Fallback upsert siswa:", error.message);
+                                const resFallback = await supaClient.from('siswa').upsert(batch);
+                                error = resFallback.error;
+                            }
                             if (error) throw error;
                         }
                         alert(`Berhasil mengimpor ${total} data siswa ke database!`);
@@ -2512,10 +2552,18 @@
                             const photoUrl = await uploadBerkas(item.file, 'siswa');
                             if (!photoUrl) throw new Error("Gagal mengunggah berkas foto.");
 
-                            const { error } = await supaClient.from('siswa').update({ Foto: photoUrl }).eq('NIS', item.matchedSiswa.NIS);
-                            if (error) throw error;
+                            const cleanNis = /^\d+$/.test(String(item.matchedSiswa.NIS).trim()) ? parseInt(String(item.matchedSiswa.NIS).trim(), 10) : String(item.matchedSiswa.NIS).trim();
+                            const { error } = await supaClient.from('siswa').update({ Foto: photoUrl }).eq('NIS', cleanNis);
+                            if (error) {
+                                if (error.message && error.message.toLowerCase().includes('foto')) {
+                                    alert("Pemberitahuan: Kolom 'Foto' belum ditambahkan di tabel 'siswa' Supabase Anda.\n\nUntuk mengaktifkan penyimpanan foto siswa, silakan buka Supabase -> SQL Editor dan jalankan:\n\nALTER TABLE siswa ADD COLUMN IF NOT EXISTS \"Foto\" TEXT;\n\nSetelah itu, silakan ulangi upload batch foto.");
+                                    batchFotoUploading.value = false;
+                                    return;
+                                }
+                                throw error;
+                            }
 
-                            const localSiswa = dataSiswa.value.find(s => s.NIS === item.matchedSiswa.NIS);
+                            const localSiswa = dataSiswa.value.find(s => s.NIS === item.matchedSiswa.NIS || s.NIS === cleanNis);
                             if (localSiswa) localSiswa.Foto = photoUrl;
 
                             item.uploadState = 'success';
