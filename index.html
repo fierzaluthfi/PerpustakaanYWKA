@@ -849,36 +849,87 @@
                     <!-- Modal Buku -->
                     <form v-if="modalType === 'buku'" @submit.prevent="simpanBuku" class="space-y-3 mt-4">
                         <h3 class="font-bold text-lg mb-4">{{ isEditMode ? 'Edit Buku' : 'Tambah Buku' }}</h3>
-                        <div class="grid grid-cols-2 gap-3">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <!-- Kolom ID / ISBN -->
                             <div>
                                 <div class="flex items-center justify-between mb-1">
-                                    <label class="text-xs font-bold text-gray-700">ID / ISBN</label>
-                                    <label v-if="!isEditMode" class="text-[11px] text-blue-600 hover:text-blue-800 font-semibold cursor-pointer flex items-center gap-1" title="Scan Barcode / Teks ISBN dari foto atau jepret kamera">
-                                        <i class="fas fa-camera"></i> <span>Scan Foto</span>
-                                        <input type="file" accept="image/*" @change="deteksiIsbnLangsung" class="hidden">
+                                    <label class="text-xs font-bold text-gray-700 flex items-center gap-1.5">
+                                        <span>ID / ISBN (Tanpa Strip)</span>
+                                        <span class="text-[9px] bg-blue-100 text-ywka-blue font-bold px-1.5 py-0.5 rounded uppercase">Indo</span>
                                     </label>
+                                    <div class="flex items-center gap-1.5">
+                                        <!-- Tombol Regenerate ISBN Indo -->
+                                        <button v-if="!isEditMode" type="button" @click="generateIsbnIndo" class="text-[11px] text-emerald-700 hover:text-emerald-900 font-bold flex items-center gap-1 bg-emerald-50 hover:bg-emerald-100 px-2 py-0.5 rounded border border-emerald-300 shadow-xs transition" title="Generate nomor ISBN standar Indonesia (978602... / 978623...) murni angka tanpa strip">
+                                            <i class="fas fa-sync-alt"></i> <span>Regenerate ISBN Indo</span>
+                                        </button>
+                                        <!-- Tombol Scan Cover -->
+                                        <label v-if="!isEditMode" class="text-[11px] text-blue-700 hover:text-blue-900 font-semibold cursor-pointer flex items-center gap-1 bg-blue-50 hover:bg-blue-100 px-2 py-0.5 rounded border border-blue-300 shadow-xs transition" title="Scan Barcode / Teks ISBN dari foto atau jepret kamera">
+                                            <i class="fas fa-camera"></i> <span>Scan</span>
+                                            <input type="file" accept="image/*" @change="deteksiIsbnLangsung" class="hidden">
+                                        </label>
+                                    </div>
                                 </div>
-                                <input type="text" v-model="formBuku.kode" required class="w-full border rounded p-2 text-sm" placeholder="Contoh: 978602..." :readonly="isEditMode">
+                                
+                                <div class="relative">
+                                    <input type="text" v-model="formBuku.kode" @input="cekDanBersihkanIsbn" required class="w-full border rounded p-2 text-sm font-mono pr-24" placeholder="Contoh: 9786020892290" :readonly="isEditMode">
+                                    <button v-if="formBuku.kode && String(formBuku.kode).includes('-')" type="button" @click="bersihkanStripIsbn" class="absolute right-1.5 top-1.5 bg-amber-500 hover:bg-amber-600 text-white text-[10px] font-bold px-2 py-1 rounded shadow-sm transition" title="Hapus semua strip (-) agar penulisan sesuai format website">
+                                        <i class="fas fa-broom mr-0.5"></i> Hapus Strip
+                                    </button>
+                                </div>
+                                <div class="flex items-center justify-between text-[10px] text-gray-500 mt-1">
+                                    <span><i class="fas fa-info-circle text-ywka-blue mr-1"></i>Format YWKA: Angka murni tanpa strip (-)</span>
+                                    <button v-if="!formBuku.kode && !isEditMode" type="button" @click="generateIsbnIndo" class="text-emerald-600 hover:text-emerald-800 font-bold underline">
+                                        + Buat ISBN Baru
+                                    </button>
+                                </div>
                                 
                                 <!-- Status Deteksi ISBN -->
-                                <div v-if="isbnScanStatus.loading" class="text-[11px] text-blue-600 font-medium mt-1 flex items-center gap-1.5 bg-blue-50 p-1.5 rounded border border-blue-200">
+                                <div v-if="isbnScanStatus.loading" class="text-[11px] text-blue-600 font-medium mt-1.5 flex items-center gap-1.5 bg-blue-50 p-2 rounded border border-blue-200">
                                     <i class="fas fa-spinner fa-spin"></i> <span>{{ isbnScanStatus.message }}</span>
                                 </div>
-                                <div v-if="isbnScanStatus.success" class="text-[11px] text-green-700 font-semibold mt-1 bg-green-50 p-1.5 rounded border border-green-200 flex flex-col gap-1">
+                                <div v-if="isbnScanStatus.success" class="text-[11px] text-green-700 font-semibold mt-1.5 bg-green-50 p-2 rounded border border-green-200 flex flex-col gap-1">
                                     <div class="flex items-center justify-between">
-                                        <span><i class="fas fa-check-circle mr-1"></i>ISBN: <b>{{ formBuku.kode }}</b></span>
+                                        <span><i class="fas fa-check-circle mr-1 text-green-600"></i>ISBN: <b class="font-mono">{{ formBuku.kode }}</b></span>
                                         <button v-if="!formBuku.judul" type="button" @click="isiOtomatisDariGoogleBooks" class="text-[10px] text-blue-700 underline font-bold hover:text-blue-900">
                                             <i class="fas fa-magic mr-0.5"></i>Isi Data Buku
                                         </button>
                                     </div>
                                 </div>
-                                <div v-if="isbnScanStatus.message && !isbnScanStatus.loading && !isbnScanStatus.success" class="text-[11px] text-amber-800 mt-1 bg-amber-50 p-1.5 rounded border border-amber-200">
+                                <div v-if="isbnScanStatus.message && !isbnScanStatus.loading && !isbnScanStatus.success" class="text-[11px] text-amber-800 mt-1.5 bg-amber-50 p-2 rounded border border-amber-200">
                                     <i class="fas fa-info-circle mr-1 text-amber-600"></i>{{ isbnScanStatus.message }}
                                 </div>
                             </div>
+
+                            <!-- Input Kategori / Genre dengan Auto-Fill & Quick Badges Website -->
                             <div>
-                                <label class="text-xs font-bold block mb-1">Kategori</label>
-                                <input type="text" v-model="formBuku.kategori" required class="w-full border rounded p-2 text-sm" placeholder="Contoh: Pelajaran / Fiksi">
+                                <div class="flex items-center justify-between mb-1">
+                                    <label class="text-xs font-bold text-gray-700 flex items-center gap-1">
+                                        <span>Kategori / Genre</span>
+                                        <span class="text-[9px] text-gray-400 font-normal">(Standar Website)</span>
+                                    </label>
+                                    <button type="button" @click="autoIsiGenreWebsite" class="text-[11px] text-white bg-ywka-orange hover:bg-orange-600 px-2 py-0.5 rounded font-bold shadow-xs transition flex items-center gap-1" title="Tebak / isi otomatis genre sesuai standar website dari judul atau sinopsis">
+                                        <i class="fas fa-magic"></i> <span>Auto Genre</span>
+                                    </button>
+                                </div>
+                                
+                                <input type="text" v-model="formBuku.kategori" list="listGenreWebsite" required class="w-full border rounded p-2 text-sm focus:ring-1 focus:ring-ywka-orange" placeholder="Contoh: Shoujo, Komik, Romansa">
+                                <datalist id="listGenreWebsite">
+                                    <option v-for="g in daftarKategoriWebsiteLengkap" :key="g" :value="g"></option>
+                                </datalist>
+                                
+                                <!-- Quick Select Genre Pills -->
+                                <div class="mt-2 bg-gray-50 border border-gray-200 rounded p-1.5">
+                                    <div class="flex items-center justify-between text-[10px] text-gray-500 font-bold mb-1">
+                                        <span>Pilih Genre Cepat (Klik untuk menambah):</span>
+                                        <button v-if="formBuku.kategori" type="button" @click="formBuku.kategori = ''" class="text-red-500 hover:text-red-700 underline text-[9px]">Reset</button>
+                                    </div>
+                                    <div class="flex flex-wrap gap-1 max-h-24 overflow-y-auto pr-0.5">
+                                        <button v-for="gItem in genrePillsCepat" :key="gItem" type="button" @click="toggleGenrePill(gItem)" :class="isGenrePillActive(gItem) ? 'bg-ywka-orange text-white border-orange-500 font-bold shadow-xs' : 'bg-white hover:bg-orange-50 text-gray-700 border-gray-300 font-medium'" class="text-[10px] px-2 py-0.5 rounded-full border transition flex items-center gap-1 select-none">
+                                            <i :class="isGenrePillActive(gItem) ? 'fas fa-check text-[9px]' : 'fas fa-plus text-[9px] text-gray-400'"></i>
+                                            <span>{{ gItem }}</span>
+                                        </button>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                         <div><label class="text-xs font-bold">Judul Buku</label><input type="text" v-model="formBuku.judul" required class="w-full border rounded p-2 text-sm"></div>
@@ -1810,19 +1861,234 @@
                     await supaClient.storage.from('berkas').upload(fName, file);
                     return supaClient.storage.from('berkas').getPublicUrl(fName).data.publicUrl;
                 }
+                // --- STANDARISASI GENRE SESUAI WEBSITE PERPUSTAKAAN YWKA ---
+                const DAFTAR_GENRE_RESMI_YWKA = [
+                    'Komik', 'Romansa', 'Shoujo', 'Shounen', 'Misteri', 'Detektif', 
+                    'Komedi', 'Aksi', 'Fighting', 'Olahraga', 'Fantasi', 'Petualangan', 
+                    'Pendidikan', 'Pelajaran', 'Drama', 'Supernatural', 'Dewasa', 
+                    'Family', 'Novel', 'Sci-Fi', 'Sejarah', 'Biografi', 'Agama'
+                ];
+
+                const genrePillsCepat = [
+                    'Komik', 'Romansa', 'Shoujo', 'Shounen', 
+                    'Misteri', 'Aksi', 'Olahraga', 'Komedi', 
+                    'Fantasi', 'Pendidikan', 'Detektif', 'Drama', 
+                    'Petualangan', 'Supernatural', 'Novel'
+                ];
+
+                const daftarKategoriWebsiteLengkap = computed(() => {
+                    const list = new Set(genrePillsCepat);
+                    dataBuku.value.forEach(b => {
+                        if (b.Kategori) {
+                            b.Kategori.split(',').forEach(part => {
+                                const clean = part.trim();
+                                if (clean) list.add(clean);
+                            });
+                        }
+                    });
+                    return Array.from(list).sort();
+                });
+
+                const petakanKategoriKeGenreWebsite = (rawCategory, judul = '', sinopsis = '') => {
+                    const teksGabungan = `${rawCategory || ''} ${judul || ''} ${sinopsis || ''}`.toLowerCase();
+                    const genreDitemukan = new Set();
+
+                    // 1. Cek Komik / Manga / Manhwa
+                    if (/komik|comic|manga|manhwa|graphic novel|tankobon|shojo|shoujo|shonen|shounen/i.test(teksGabungan)) {
+                        genreDitemukan.add('Komik');
+                    }
+
+                    // 2. Cek Shoujo
+                    if (/shoujo|shojo|gadis|school romance|cinta remaja/i.test(teksGabungan)) {
+                        genreDitemukan.add('Shoujo');
+                    }
+
+                    // 3. Cek Shounen
+                    if (/shounen|shonen|ninja|pertarungan pemuda|petualangan pahlawan/i.test(teksGabungan)) {
+                        genreDitemukan.add('Shounen');
+                    }
+
+                    // 4. Cek Romansa
+                    if (/romansa|romance|romantic|love|cinta|pacaran|kasih sayang/i.test(teksGabungan)) {
+                        genreDitemukan.add('Romansa');
+                    }
+
+                    // 5. Cek Misteri & Detektif
+                    if (/misteri|mystery|detektif|detective|investigasi|kasus|murder|pembunuhan|suspens|suspense|thriller/i.test(teksGabungan)) {
+                        genreDitemukan.add('Misteri');
+                        if (/detektif|detective|conan|holmes|penyelidikan|investigasi/i.test(teksGabungan)) {
+                            genreDitemukan.add('Detektif');
+                        }
+                    }
+
+                    // 6. Cek Aksi & Fighting
+                    if (/aksi|action|pertarungan|fighting|martial|ninja|perang|battle/i.test(teksGabungan)) {
+                        genreDitemukan.add('Aksi');
+                        if (/fighting|martial|tarung|bela diri|karate|kungfu|ninja/i.test(teksGabungan)) {
+                            genreDitemukan.add('Fighting');
+                        }
+                    }
+
+                    // 7. Cek Olahraga
+                    if (/olahraga|sports?|basket|sepak bola|soccer|football|badminton|voli|volleyball|tenis|renang/i.test(teksGabungan)) {
+                        genreDitemukan.add('Olahraga');
+                    }
+
+                    // 8. Cek Komedi
+                    if (/komedi|comedy|humor|lucu|kocak|lawak/i.test(teksGabungan)) {
+                        genreDitemukan.add('Komedi');
+                    }
+
+                    // 9. Cek Fantasi & Petualangan
+                    if (/fantasi|fantasy|magic|sihir|isekai|monster|naga|demon|devil|dewa/i.test(teksGabungan)) {
+                        genreDitemukan.add('Fantasi');
+                    }
+                    if (/petualangan|adventure|quest|jelajah|pengembaraan/i.test(teksGabungan)) {
+                        genreDitemukan.add('Petualangan');
+                    }
+
+                    // 10. Cek Supernatural
+                    if (/supernatural|paranormal|hantu|ghost|arwah|roh|kutukan|ghaib|gaib/i.test(teksGabungan)) {
+                        genreDitemukan.add('Supernatural');
+                    }
+
+                    // 11. Cek Drama & Family
+                    if (/drama|melodrama|kehidupan|tragedi/i.test(teksGabungan)) {
+                        genreDitemukan.add('Drama');
+                    }
+                    if (/family|keluarga|orang tua|anak/i.test(teksGabungan)) {
+                        genreDitemukan.add('Family');
+                    }
+
+                    // 12. Cek Pendidikan / Pelajaran
+                    if (/pendidikan|pelajaran|textbook|sekolah|kelas|sma|smk|smp|matematika|fisika|kimia|biologi|geografi|ekonomi|sosiologi|sejarah|bahasa|kurikulum/i.test(teksGabungan)) {
+                        genreDitemukan.add('Pendidikan');
+                    }
+
+                    // 13. Cek Novel
+                    if (/novel|roman|prosa|fiksi/i.test(teksGabungan) && !genreDitemukan.has('Komik')) {
+                        genreDitemukan.add('Novel');
+                    }
+
+                    // 14. Cek Sci-Fi
+                    if (/sci-fi|science fiction|luar angkasa|robot|cyborg|mecha|antariksa/i.test(teksGabungan)) {
+                        genreDitemukan.add('Sci-Fi');
+                    }
+
+                    // Jika rawCategory memiliki teks yang cocok dengan nama genre resmi
+                    if (rawCategory) {
+                        rawCategory.split(/[,/]/).forEach(item => {
+                            let s = item.trim();
+                            if (!s) return;
+                            const sLow = s.toLowerCase();
+                            DAFTAR_GENRE_RESMI_YWKA.forEach(resmi => {
+                                if (sLow === resmi.toLowerCase()) {
+                                    genreDitemukan.add(resmi);
+                                }
+                            });
+                            if (sLow === 'action') genreDitemukan.add('Aksi');
+                            if (sLow === 'sports' || sLow === 'sport') genreDitemukan.add('Olahraga');
+                            if (sLow === 'suspense' || sLow === 'suspens') genreDitemukan.add('Misteri');
+                            if (sLow === 'detective') genreDitemukan.add('Detektif');
+                            if (sLow === 'education') genreDitemukan.add('Pendidikan');
+                        });
+                    }
+
+                    const hasilArray = Array.from(genreDitemukan);
+                    if (hasilArray.length === 0) {
+                        return 'Komik';
+                    }
+                    return hasilArray.join(', ');
+                };
+
+                const toggleGenrePill = (genreNama) => {
+                    const current = (formBuku.value.kategori || '')
+                        .split(',')
+                        .map(s => s.trim())
+                        .filter(Boolean);
+                    
+                    const idx = current.findIndex(g => g.toLowerCase() === genreNama.toLowerCase());
+                    if (idx >= 0) {
+                        current.splice(idx, 1);
+                    } else {
+                        current.push(genreNama);
+                    }
+                    formBuku.value.kategori = current.join(', ');
+                };
+
+                const isGenrePillActive = (genreNama) => {
+                    if (!formBuku.value.kategori) return false;
+                    const current = formBuku.value.kategori
+                        .split(',')
+                        .map(s => s.trim().toLowerCase());
+                    return current.includes(genreNama.toLowerCase());
+                };
+
+                const autoIsiGenreWebsite = () => {
+                    const rawCat = (googleBooksFoundData.value && googleBooksFoundData.value.kategori) 
+                        ? googleBooksFoundData.value.kategori 
+                        : formBuku.value.kategori;
+                    const genreHasil = petakanKategoriKeGenreWebsite(
+                        rawCat, 
+                        formBuku.value.judul, 
+                        formBuku.value.sinopsis
+                    );
+                    formBuku.value.kategori = genreHasil;
+                };
+
+                // --- FITUR REGENERATE ISBN INDO & FORMAT TANPA STRIP ---
+                const generateIsbnIndo = () => {
+                    // Prefix Indonesia ISBN-13 standar Perpusnas: 978602 (paling banyak di perpus YWKA) atau 978623
+                    const prefixes = ['978602', '978623', '978979'];
+                    const prefix = prefixes[Math.floor(Math.random() * prefixes.length)];
+                    
+                    // 6 digit nomor unik acak
+                    const randomMiddle = Math.floor(100000 + Math.random() * 900000).toString();
+                    const first12 = prefix + randomMiddle;
+                    
+                    // Hitung check digit Modulo 10 standar internasional ISBN-13
+                    let sum = 0;
+                    for (let i = 0; i < 12; i++) {
+                        const digit = parseInt(first12.charAt(i), 10);
+                        sum += (i % 2 === 0) ? digit : digit * 3;
+                    }
+                    const rem = sum % 10;
+                    const checkDigit = rem === 0 ? 0 : 10 - rem;
+                    
+                    const isbnBaru = first12 + checkDigit.toString();
+                    formBuku.value.kode = isbnBaru;
+                    isbnScanStatus.value = {
+                        loading: false,
+                        success: true,
+                        message: `ISBN Indonesia ${isbnBaru} berhasil digenerate tanpa strip!`
+                    };
+                };
+
+                const bersihkanStripIsbn = () => {
+                    if (!formBuku.value.kode) return;
+                    formBuku.value.kode = String(formBuku.value.kode).replace(/[\s\-\.]/g, '').trim();
+                };
+
+                const cekDanBersihkanIsbn = (e) => {
+                    const val = e && e.target ? e.target.value : formBuku.value.kode;
+                    if (val && /[\s\-\.]/.test(val)) {
+                        formBuku.value.kode = String(val).replace(/[\s\-\.]/g, '').trim();
+                    }
+                };
+
                 // --- FITUR AUTOFILL ISBN DARI FOTO ---
                 const extractCleanIsbn = (str) => {
                     if (!str) return null;
                     const clean = String(str).trim();
                     const digitsOnly = clean.replace(/[^0-9X]/gi, '');
-                    // Prioritaskan format ISBN-13 (dimulai 978 atau 979 dan 13 digit)
+                    // Format ISBN-13 tanpa strip (dimulai 978 atau 979 dan 13 digit)
                     if ((digitsOnly.startsWith('978') || digitsOnly.startsWith('979')) && digitsOnly.length === 13) {
                         return digitsOnly;
                     }
                     if (digitsOnly.length === 13 || digitsOnly.length === 10) {
                         return digitsOnly;
                     }
-                    return clean;
+                    return digitsOnly || clean.replace(/[\s\-]/g, '');
                 };
 
                 const extractIsbnFromOcrText = (text) => {
@@ -1849,12 +2115,14 @@
                         const data = await res.json();
                         if (data.items && data.items.length > 0) {
                             const vol = data.items[0].volumeInfo || {};
+                            const rawKategori = (vol.categories || []).join(', ') || '';
+                            const mappedGenre = petakanKategoriKeGenreWebsite(rawKategori, vol.title, vol.description);
                             return {
                                 judul: vol.title || '',
                                 pengarang: (vol.authors || []).join(', '),
                                 penerbit: vol.publisher || '',
                                 tahun: vol.publishedDate ? parseInt(vol.publishedDate.substring(0, 4)) : '',
-                                kategori: (vol.categories || [])[0] || '',
+                                kategori: mappedGenre || 'Komik',
                                 sinopsis: vol.description || ''
                             };
                         }
@@ -1869,6 +2137,8 @@
                         alert("Harap masukkan atau scan ISBN terlebih dahulu!");
                         return;
                     }
+                    // Pastikan input ISBN dibersihkan dari strip
+                    bersihkanStripIsbn();
                     isbnScanStatus.value = { loading: true, success: false, message: 'Mengambil data buku dari Google Books...' };
                     const meta = await cariDetailBukuViaIsbn(formBuku.value.kode);
                     if (meta && meta.judul) {
@@ -1877,18 +2147,22 @@
                         if (meta.pengarang) formBuku.value.pengarang = meta.pengarang;
                         if (meta.penerbit) formBuku.value.penerbit = meta.penerbit;
                         if (meta.tahun) formBuku.value.tahun = meta.tahun;
-                        if (meta.kategori && !formBuku.value.kategori) formBuku.value.kategori = meta.kategori;
+                        if (meta.kategori) formBuku.value.kategori = meta.kategori;
                         if (meta.sinopsis && !formBuku.value.sinopsis) formBuku.value.sinopsis = meta.sinopsis;
                         isbnScanStatus.value = { 
                             loading: false, 
                             success: true, 
-                            message: `Data '${meta.judul}' berhasil diisikan otomatis!` 
+                            message: `Data '${meta.judul}' & genre '${meta.kategori}' berhasil diisikan!` 
                         };
                     } else {
+                        // Jika tidak ada di Google Books, coba isi auto genre jika judul terisi
+                        if (formBuku.value.judul && !formBuku.value.kategori) {
+                            formBuku.value.kategori = petakanKategoriKeGenreWebsite('', formBuku.value.judul, formBuku.value.sinopsis);
+                        }
                         isbnScanStatus.value = { 
                             loading: false, 
                             success: false, 
-                            message: 'Data buku tidak ditemukan di Google Books. Anda dapat melengkapinya manual.' 
+                            message: 'Data buku tidak ditemukan di Google Books. Genre dapat dipilih melalui tombol atau pills.' 
                         };
                     }
                 };
@@ -2009,23 +2283,24 @@
                         URL.revokeObjectURL(imgUrl);
 
                         if (foundIsbn) {
-                            formBuku.value.kode = foundIsbn;
+                            const cleanFoundIsbn = String(foundIsbn).replace(/[\s\-\.]/g, '').trim();
+                            formBuku.value.kode = cleanFoundIsbn;
                             isbnScanStatus.value = { 
                                 loading: false, 
                                 success: true, 
-                                message: `ISBN ${foundIsbn} berhasil terdeteksi!` 
+                                message: `ISBN ${cleanFoundIsbn} berhasil terdeteksi (format tanpa strip)!` 
                             };
 
                             // Auto-fetch data buku dari Google Books jika judul masih kosong
                             if (!formBuku.value.judul) {
-                                const bookMeta = await cariDetailBukuViaIsbn(foundIsbn);
+                                const bookMeta = await cariDetailBukuViaIsbn(cleanFoundIsbn);
                                 if (bookMeta && bookMeta.judul) {
                                     googleBooksFoundData.value = bookMeta;
                                     formBuku.value.judul = bookMeta.judul;
                                     if (bookMeta.pengarang) formBuku.value.pengarang = bookMeta.pengarang;
                                     if (bookMeta.penerbit) formBuku.value.penerbit = bookMeta.penerbit;
                                     if (bookMeta.tahun) formBuku.value.tahun = bookMeta.tahun;
-                                    if (bookMeta.kategori && !formBuku.value.kategori) formBuku.value.kategori = bookMeta.kategori;
+                                    if (bookMeta.kategori) formBuku.value.kategori = bookMeta.kategori;
                                     if (bookMeta.sinopsis && !formBuku.value.sinopsis) formBuku.value.sinopsis = bookMeta.sinopsis;
                                 }
                             }
@@ -2095,14 +2370,24 @@
                     loading.value = true;
                     try {
                         if(formBuku.value.file) { formBuku.value.Gambar = await uploadBerkas(formBuku.value.file, 'buku'); }
-                        const qrUrl = "https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=" + encodeURIComponent(formBuku.value.kode);
+                        // Pastikan KodeBuku murni angka tanpa strip / spasi sesuai standar website YWKA
+                        const cleanKodeBuku = String(formBuku.value.kode || '').replace(/[\s\-\.]/g, '').trim();
+                        // Bersihkan spasi dan tanda koma berlebih pada kategori/genre
+                        const cleanKategori = (formBuku.value.kategori || '')
+                            .split(',')
+                            .map(s => s.trim())
+                            .filter(Boolean)
+                            .join(', ');
+                        formBuku.value.kode = cleanKodeBuku;
+                        formBuku.value.kategori = cleanKategori;
+                        const qrUrl = "https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=" + encodeURIComponent(cleanKodeBuku);
                         const p = { 
-                            KodeBuku: formBuku.value.kode, 
+                            KodeBuku: cleanKodeBuku, 
                             Judul: formBuku.value.judul, 
                             Pengarang: formBuku.value.pengarang, 
                             Penerbit: formBuku.value.penerbit, 
                             Tahun: formBuku.value.tahun, 
-                            Kategori: formBuku.value.kategori, 
+                            Kategori: cleanKategori, 
                             Rak: formBuku.value.rak, 
                             Stok: formBuku.value.stok, 
                             QRCode: qrUrl, 
@@ -3278,7 +3563,10 @@
                     bukaBatchFotoModal, handleBatchFotoChange, hapusItemBatchFoto, eksekusiUploadBatchFoto,
                     selectedSiswaIds, selectAllSiswa, sortSiswaOrder, filterKelasSiswa, filterStatusSiswa, filterNisSiswa,
                     daftarKelasSiswa, toggleSortNis, cetakKartuSiswaTerpilih, hapusSiswaTerpilih, ubahStatusSiswaTerpilih,
-                    isSearchFocused, searchResultsBuku, searchResultsSiswa
+                    isSearchFocused, searchResultsBuku, searchResultsSiswa,
+                    generateIsbnIndo, bersihkanStripIsbn, cekDanBersihkanIsbn,
+                    autoIsiGenreWebsite, toggleGenrePill, isGenrePillActive,
+                    genrePillsCepat, daftarKategoriWebsiteLengkap
                 }
             }
         }).mount('#app')
