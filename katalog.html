@@ -7,7 +7,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
-    <script src="sinopsis-data.js"></script>
+    <script src="sinopsis-data.js" defer></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         .bg-ywka-blue { background-color: #071a9e; }
@@ -197,11 +197,11 @@
 
             <!-- GRID DAFTAR BUKU -->
             <div v-else class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 md:gap-6">
-                <div v-for="buku in filteredBuku" :key="buku.KodeBuku" @click="lihatDetailBuku(buku)" class="bg-white rounded-xl shadow-md overflow-hidden border hover:shadow-xl hover:-translate-y-1 transition-all duration-200 flex flex-col group cursor-pointer" title="Klik untuk melihat detail & informasi buku">
+                <div v-for="buku in bukuDitampilkan" :key="buku.KodeBuku" @click="lihatDetailBuku(buku)" class="bg-white rounded-xl shadow-md overflow-hidden border hover:shadow-xl hover:-translate-y-1 transition-all duration-200 flex flex-col group cursor-pointer" title="Klik untuk melihat detail & informasi buku">
                     
                     <!-- Cover Buku & Badge Stok -->
                     <div class="relative h-48 md:h-60 bg-gray-200 overflow-hidden flex items-center justify-center">
-                        <img v-if="buku.Gambar" :src="buku.Gambar" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300">
+                        <img v-if="buku.Gambar" :src="buku.Gambar" loading="lazy" decoding="async" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300">
                         <div v-else class="text-gray-400 flex flex-col items-center"><i class="fas fa-book text-4xl mb-1"></i><span class="text-xs">Tanpa Cover</span></div>
                         
                         <!-- Badge Ketersediaan -->
@@ -255,6 +255,15 @@
                 </div>
             </div>
 
+            <!-- Tombol Muat Lebih Banyak Buku (Mempercepat load HP) -->
+            <div v-if="filteredBuku.length > bukuDitampilkan.length" class="text-center py-6">
+                <button @click="muatLebihBanyak" class="bg-white hover:bg-orange-50 text-ywka-orange border-2 border-ywka-orange hover:border-orange-600 font-bold px-6 py-2.5 rounded-full shadow-md hover:shadow-lg transition-all text-xs md:text-sm inline-flex items-center gap-2">
+                    <i class="fas fa-layer-group"></i>
+                    <span>Tampilkan Lebih Banyak Buku (Tersisa {{ filteredBuku.length - bukuDitampilkan.length }} buku)</span>
+                    <i class="fas fa-chevron-down text-xs"></i>
+                </button>
+            </div>
+
             <!-- JIKA KOSONG -->
             <div v-if="!loading && filteredBuku.length === 0" class="text-center py-20 bg-white rounded-xl shadow border p-8">
                 <i class="fas fa-search text-4xl text-gray-300 mb-3"></i>
@@ -281,7 +290,7 @@
                     <!-- Kiri: Cover & QR Code -->
                     <div class="w-full sm:w-1/3 flex flex-col items-center space-y-3">
                         <div class="w-32 h-44 rounded-lg overflow-hidden shadow-md border bg-gray-100 flex items-center justify-center">
-                            <img v-if="selectedBuku.Gambar" :src="selectedBuku.Gambar" class="w-full h-full object-cover" :alt="selectedBuku.Judul">
+                            <img v-if="selectedBuku.Gambar" :src="selectedBuku.Gambar" loading="lazy" decoding="async" class="w-full h-full object-cover" :alt="selectedBuku.Judul">
                             <div v-else class="text-gray-400 flex flex-col items-center">
                                 <i class="fas fa-book text-4xl mb-1"></i>
                                 <span class="text-[11px]">Tanpa Cover</span>
@@ -438,7 +447,7 @@
                 <!-- Ringkasan Buku & Siswa -->
                 <div class="bg-blue-50/70 border border-blue-200/80 rounded-xl p-3.5 mb-4 flex gap-3.5 items-center">
                     <div class="w-14 h-20 bg-gray-200 rounded-lg overflow-hidden flex-shrink-0 shadow border">
-                        <img v-if="bukuDipinjam.Gambar" :src="bukuDipinjam.Gambar" class="w-full h-full object-cover">
+                        <img v-if="bukuDipinjam.Gambar" :src="bukuDipinjam.Gambar" loading="lazy" decoding="async" class="w-full h-full object-cover">
                         <div v-else class="w-full h-full flex items-center justify-center text-gray-400"><i class="fas fa-book text-xl"></i></div>
                     </div>
                     <div class="flex-1 min-w-0">
@@ -618,7 +627,7 @@
         const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNydXd1aXVqZnFjbm15Y2h5emd1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTE3NzExMzksImV4cCI6MjEwNzM0NzEzOX0.6qnyfEwtrf91xQCteBaofJ_H5FKsZ9Moh4Le2s9VhZs";
         const supaClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-        const { createApp, ref, computed, onMounted } = Vue;
+        const { createApp, ref, computed, onMounted, watch } = Vue;
         createApp({
             setup() {
                 const dataBuku = ref([]);
@@ -628,6 +637,16 @@
                 const filterPenerbit = ref('');
                 const hanyaTersedia = ref(false);
                 const sortBy = ref('default');
+                const limitBukuTampil = ref(24);
+                const bukuDitampilkan = computed(() => {
+                    return filteredBuku.value.slice(0, limitBukuTampil.value);
+                });
+                const muatLebihBanyak = () => {
+                    limitBukuTampil.value += 24;
+                };
+                watch([searchQuery, filterGenre, filterPenerbit, hanyaTersedia, sortBy], () => {
+                    limitBukuTampil.value = 24;
+                });
                 const filterKategori = computed({
                     get: () => filterGenre.value,
                     set: (val) => { filterGenre.value = val; }
@@ -1106,6 +1125,7 @@
 
                 return { 
                     dataBuku, loading, searchQuery, filterKategori, daftarKategori, filteredBuku,
+                    limitBukuTampil, bukuDitampilkan, muatLebihBanyak,
                     filterGenre, filterPenerbit, hanyaTersedia, sortBy, isFilterAktif, resetSemuaFilter,
                     daftarSemuaGenre, genrePopuler, daftarSemuaPenerbit, getGenreTags,
                     showModalDetail, selectedBuku, lihatDetailBuku, tutupModalDetail, getSinopsis,
