@@ -855,15 +855,17 @@
                                 <div class="flex items-center justify-between mb-1">
                                     <label class="text-xs font-bold text-gray-700 flex items-center gap-1.5">
                                         <span>ID / ISBN (Tanpa Strip)</span>
-                                        <span class="text-[9px] bg-blue-100 text-ywka-blue font-bold px-1.5 py-0.5 rounded uppercase">Indo</span>
+                                        <span v-if="isEditMode" class="text-[9px] bg-amber-100 text-amber-800 font-bold px-1.5 py-0.5 rounded uppercase">Dapat Diedit</span>
+                                        <span v-else class="text-[9px] bg-blue-100 text-ywka-blue font-bold px-1.5 py-0.5 rounded uppercase">Indo</span>
                                     </label>
                                     <div class="flex items-center gap-1.5">
-                                        <!-- Tombol Regenerate ISBN Indo -->
-                                        <button v-if="!isEditMode" type="button" @click="generateIsbnIndo" class="text-[11px] text-emerald-700 hover:text-emerald-900 font-bold flex items-center gap-1 bg-emerald-50 hover:bg-emerald-100 px-2 py-0.5 rounded border border-emerald-300 shadow-xs transition" title="Generate nomor ISBN standar Indonesia (978602... / 978623...) murni angka tanpa strip">
-                                            <i class="fas fa-sync-alt"></i> <span>Regenerate ISBN Indo</span>
+                                        <!-- Tombol Auto Ambil ISBN dari Google (Bukan nomor acak) -->
+                                        <button type="button" @click="cariIsbnDariGoogle" :disabled="isSearchingGoogleIsbn" class="text-[11px] text-blue-700 hover:text-blue-900 font-bold flex items-center gap-1 bg-blue-50 hover:bg-blue-100 px-2.5 py-0.5 rounded border border-blue-300 shadow-xs transition disabled:opacity-50" title="Cari dan ambil nomor ISBN resmi dari Google Books berdasarkan judul buku">
+                                            <i class="fas" :class="isSearchingGoogleIsbn ? 'fa-spinner fa-spin' : 'fa-search text-blue-600'"></i>
+                                            <span>{{ isSearchingGoogleIsbn ? 'Mencari...' : 'Auto ISBN (Google)' }}</span>
                                         </button>
-                                        <!-- Tombol Scan Cover -->
-                                        <label v-if="!isEditMode" class="text-[11px] text-blue-700 hover:text-blue-900 font-semibold cursor-pointer flex items-center gap-1 bg-blue-50 hover:bg-blue-100 px-2 py-0.5 rounded border border-blue-300 shadow-xs transition" title="Scan Barcode / Teks ISBN dari foto atau jepret kamera">
+                                        <!-- Tombol Scan Cover (Dapat digunakan saat Tambah maupun Edit) -->
+                                        <label class="text-[11px] text-emerald-700 hover:text-emerald-900 font-semibold cursor-pointer flex items-center gap-1 bg-emerald-50 hover:bg-emerald-100 px-2 py-0.5 rounded border border-emerald-300 shadow-xs transition" title="Scan Barcode / Teks ISBN dari foto atau jepret kamera">
                                             <i class="fas fa-camera"></i> <span>Scan</span>
                                             <input type="file" accept="image/*" @change="deteksiIsbnLangsung" class="hidden">
                                         </label>
@@ -871,15 +873,15 @@
                                 </div>
                                 
                                 <div class="relative">
-                                    <input type="text" v-model="formBuku.kode" @input="cekDanBersihkanIsbn" required class="w-full border rounded p-2 text-sm font-mono pr-24" placeholder="Contoh: 9786020892290" :readonly="isEditMode">
+                                    <input type="text" v-model="formBuku.kode" @input="cekDanBersihkanIsbn" required class="w-full border rounded p-2 text-sm font-mono pr-24" placeholder="Contoh: 9786020892290">
                                     <button v-if="formBuku.kode && String(formBuku.kode).includes('-')" type="button" @click="bersihkanStripIsbn" class="absolute right-1.5 top-1.5 bg-amber-500 hover:bg-amber-600 text-white text-[10px] font-bold px-2 py-1 rounded shadow-sm transition" title="Hapus semua strip (-) agar penulisan sesuai format website">
                                         <i class="fas fa-broom mr-0.5"></i> Hapus Strip
                                     </button>
                                 </div>
                                 <div class="flex items-center justify-between text-[10px] text-gray-500 mt-1">
                                     <span><i class="fas fa-info-circle text-ywka-blue mr-1"></i>Format YWKA: Angka murni tanpa strip (-)</span>
-                                    <button v-if="!formBuku.kode && !isEditMode" type="button" @click="generateIsbnIndo" class="text-emerald-600 hover:text-emerald-800 font-bold underline">
-                                        + Buat ISBN Baru
+                                    <button type="button" @click="cariIsbnDariGoogle" class="text-blue-600 hover:text-blue-800 font-bold underline flex items-center gap-1">
+                                        <i class="fas fa-search text-[10px]"></i> Ambil ISBN dari Google
                                     </button>
                                 </div>
                                 
@@ -897,6 +899,33 @@
                                 </div>
                                 <div v-if="isbnScanStatus.message && !isbnScanStatus.loading && !isbnScanStatus.success" class="text-[11px] text-amber-800 mt-1.5 bg-amber-50 p-2 rounded border border-amber-200">
                                     <i class="fas fa-info-circle mr-1 text-amber-600"></i>{{ isbnScanStatus.message }}
+                                </div>
+
+                                <!-- Daftar Kandidat Edisi ISBN dari Google Books -->
+                                <div v-if="googleIsbnCandidates.length > 0" class="mt-2 bg-white border-2 border-blue-400 rounded-lg p-2.5 shadow-md">
+                                    <div class="flex items-center justify-between pb-1.5 mb-1.5 border-b text-xs">
+                                        <span class="font-bold text-blue-900 flex items-center gap-1.5">
+                                            <i class="fas fa-book-open text-blue-600"></i>
+                                            <span>Pilih Edisi / ISBN Resmi dari Google:</span>
+                                        </span>
+                                        <button type="button" @click="googleIsbnCandidates = []" class="text-[10px] text-gray-500 hover:text-red-600 font-bold">
+                                            <i class="fas fa-times"></i> Tutup
+                                        </button>
+                                    </div>
+                                    <div class="space-y-1.5 max-h-48 overflow-y-auto pr-1 text-xs">
+                                        <div v-for="(cand, idx) in googleIsbnCandidates" :key="cand.isbn" class="p-2 rounded border border-gray-200 hover:border-blue-500 hover:bg-blue-50/50 flex items-center justify-between gap-2 transition">
+                                            <div class="flex-1 min-w-0">
+                                                <div class="font-bold text-gray-900 truncate">{{ cand.judul }}</div>
+                                                <div class="text-[11px] text-gray-600 flex items-center gap-2">
+                                                    <span class="font-mono font-bold text-blue-700 bg-blue-100 px-1 rounded">{{ cand.isbn }}</span>
+                                                    <span v-if="cand.penerbit" class="truncate">{{ cand.penerbit }} ({{ cand.tahun || '-' }})</span>
+                                                </div>
+                                            </div>
+                                            <button type="button" @click="pilihKandidatIsbn(cand)" class="bg-blue-600 hover:bg-blue-700 text-white font-bold text-[10px] px-2.5 py-1 rounded shadow-xs whitespace-nowrap">
+                                                Pilih ISBN
+                                            </button>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
 
@@ -2036,32 +2065,165 @@
                     formBuku.value.kategori = genreHasil;
                 };
 
-                // --- FITUR REGENERATE ISBN INDO & FORMAT TANPA STRIP ---
-                const generateIsbnIndo = () => {
-                    // Prefix Indonesia ISBN-13 standar Perpusnas: 978602 (paling banyak di perpus YWKA) atau 978623
-                    const prefixes = ['978602', '978623', '978979'];
-                    const prefix = prefixes[Math.floor(Math.random() * prefixes.length)];
-                    
-                    // 6 digit nomor unik acak
-                    const randomMiddle = Math.floor(100000 + Math.random() * 900000).toString();
-                    const first12 = prefix + randomMiddle;
-                    
-                    // Hitung check digit Modulo 10 standar internasional ISBN-13
-                    let sum = 0;
-                    for (let i = 0; i < 12; i++) {
-                        const digit = parseInt(first12.charAt(i), 10);
-                        sum += (i % 2 === 0) ? digit : digit * 3;
+                // --- STATE EDIT ISBN & PENCARIAN ISBN GOOGLE ---
+                const oldKodeBuku = ref('');
+                const googleIsbnCandidates = ref([]);
+                const isSearchingGoogleIsbn = ref(false);
+
+                // --- FITUR AUTO AMBIL & SEARCHING ISBN DARI GOOGLE (BUKAN NOMOR ACAK) ---
+                const cariIsbnDariGoogle = async () => {
+                    let queryJudul = (formBuku.value.judul || '').trim();
+                    if (!queryJudul) {
+                        queryJudul = prompt("Masukkan Judul Buku yang ingin dicari nomor ISBN resminya di Google:", "");
+                        if (!queryJudul || !queryJudul.trim()) {
+                            return;
+                        }
+                        formBuku.value.judul = queryJudul.trim();
                     }
-                    const rem = sum % 10;
-                    const checkDigit = rem === 0 ? 0 : 10 - rem;
+
+                    isSearchingGoogleIsbn.value = true;
+                    isbnScanStatus.value = {
+                        loading: true,
+                        success: false,
+                        message: `Mencari nomor ISBN resmi di Google Books untuk "${queryJudul}"...`
+                    };
+                    googleIsbnCandidates.value = [];
+
+                    try {
+                        const queryParam = encodeURIComponent(queryJudul + (formBuku.value.pengarang ? ' ' + formBuku.value.pengarang : ''));
+                        const res = await fetch(`https://www.googleapis.com/books/v1/volumes?q=${queryParam}&maxResults=8`);
+                        
+                        let foundCandidates = [];
+
+                        if (res.ok) {
+                            const data = await res.json();
+                            if (data.items && data.items.length > 0) {
+                                data.items.forEach(item => {
+                                    const vol = item.volumeInfo || {};
+                                    const idents = vol.industryIdentifiers || [];
+                                    let candIsbn = null;
+
+                                    // Prioritas 1: ISBN Indonesia (978602..., 978623..., 978979..., 979...)
+                                    const isbnIndo = idents.find(id => {
+                                        const clean = (id.identifier || '').replace(/[^0-9X]/gi, '');
+                                        return (clean.startsWith('978602') || clean.startsWith('978623') || clean.startsWith('978979') || clean.startsWith('979')) && (clean.length === 13 || clean.length === 10);
+                                    });
+                                    if (isbnIndo) {
+                                        candIsbn = isbnIndo.identifier.replace(/[^0-9X]/gi, '');
+                                    } else {
+                                        // Prioritas 2: ISBN_13 standar
+                                        const isbn13 = idents.find(id => id.type === 'ISBN_13' || (id.identifier || '').replace(/[^0-9X]/gi, '').length === 13);
+                                        if (isbn13) {
+                                            candIsbn = isbn13.identifier.replace(/[^0-9X]/gi, '');
+                                        } else {
+                                            // Prioritas 3: ISBN_10
+                                            const isbn10 = idents.find(id => id.type === 'ISBN_10' || (id.identifier || '').replace(/[^0-9X]/gi, '').length === 10);
+                                            if (isbn10) {
+                                                candIsbn = isbn10.identifier.replace(/[^0-9X]/gi, '');
+                                            }
+                                        }
+                                    }
+
+                                    if (candIsbn) {
+                                        if (!foundCandidates.some(c => c.isbn === candIsbn)) {
+                                            foundCandidates.push({
+                                                isbn: candIsbn,
+                                                judul: vol.title || queryJudul,
+                                                pengarang: (vol.authors || []).join(', '),
+                                                penerbit: vol.publisher || '',
+                                                tahun: vol.publishedDate ? parseInt(vol.publishedDate.substring(0, 4)) : '',
+                                                kategori: petakanKategoriKeGenreWebsite((vol.categories || []).join(', '), vol.title, vol.description),
+                                                sinopsis: vol.description || ''
+                                            });
+                                        }
+                                    }
+                                });
+                            }
+                        }
+
+                        // Fallback Open Library jika Google Books kosong
+                        if (foundCandidates.length === 0) {
+                            try {
+                                const olRes = await fetch(`https://openlibrary.org/search.json?q=${encodeURIComponent(queryJudul)}&limit=5`);
+                                if (olRes.ok) {
+                                    const olData = await olRes.json();
+                                    (olData.docs || []).forEach(doc => {
+                                        if (doc.isbn && doc.isbn.length > 0) {
+                                            const isbns = doc.isbn.map(s => String(s).replace(/[^0-9X]/gi, ''));
+                                            const valid13 = isbns.find(s => s.length === 13 && (s.startsWith('978') || s.startsWith('979'))) || isbns.find(s => s.length === 13) || isbns[0];
+                                            if (valid13 && !foundCandidates.some(c => c.isbn === valid13)) {
+                                                foundCandidates.push({
+                                                    isbn: valid13,
+                                                    judul: doc.title || queryJudul,
+                                                    pengarang: (doc.author_name || []).join(', '),
+                                                    penerbit: (doc.publisher || [])[0] || '',
+                                                    tahun: doc.first_publish_year || '',
+                                                    kategori: petakanKategoriKeGenreWebsite((doc.subject || []).slice(0, 3).join(', '), doc.title),
+                                                    sinopsis: ''
+                                                });
+                                            }
+                                        }
+                                    });
+                                }
+                            } catch (olErr) {
+                                console.warn("Fallback Open Library error:", olErr);
+                            }
+                        }
+
+                        if (foundCandidates.length === 1) {
+                            pilihKandidatIsbn(foundCandidates[0]);
+                        } else if (foundCandidates.length > 1) {
+                            googleIsbnCandidates.value = foundCandidates;
+                            pilihKandidatIsbn(foundCandidates[0], false);
+                            isbnScanStatus.value = {
+                                loading: false,
+                                success: true,
+                                message: `Ditemukan ${foundCandidates.length} edisi di Google. ISBN (${foundCandidates[0].isbn}) diterapkan. Anda dapat memilih edisi lain di daftar.`
+                            };
+                        } else {
+                            isbnScanStatus.value = {
+                                loading: false,
+                                success: false,
+                                message: `Nomor ISBN tidak ditemukan di Google untuk "${queryJudul}". Coba kata kunci lebih spesifik atau masukkan manual.`
+                            };
+                        }
+                    } catch (e) {
+                        console.error("Gagal cari ISBN di Google:", e);
+                        isbnScanStatus.value = {
+                            loading: false,
+                            success: false,
+                            message: 'Gagal mencari ISBN ke Google Books. Periksa koneksi internet.'
+                        };
+                    } finally {
+                        isSearchingGoogleIsbn.value = false;
+                    }
+                };
+
+                const pilihKandidatIsbn = (cand, tutupList = true) => {
+                    if (!cand || !cand.isbn) return;
+                    const cleanIsbn = String(cand.isbn).replace(/[\s\-\.]/g, '').trim();
+                    formBuku.value.kode = cleanIsbn;
                     
-                    const isbnBaru = first12 + checkDigit.toString();
-                    formBuku.value.kode = isbnBaru;
+                    if (!formBuku.value.judul && cand.judul) formBuku.value.judul = cand.judul;
+                    if (!formBuku.value.pengarang && cand.pengarang) formBuku.value.pengarang = cand.pengarang;
+                    if (!formBuku.value.penerbit && cand.penerbit) formBuku.value.penerbit = cand.penerbit;
+                    if (!formBuku.value.tahun && cand.tahun) formBuku.value.tahun = cand.tahun;
+                    if (cand.kategori) formBuku.value.kategori = cand.kategori;
+                    if (!formBuku.value.sinopsis && cand.sinopsis) formBuku.value.sinopsis = cand.sinopsis;
+
                     isbnScanStatus.value = {
                         loading: false,
                         success: true,
-                        message: `ISBN Indonesia ${isbnBaru} berhasil digenerate tanpa strip!`
+                        message: `ISBN resmi ${cleanIsbn} berhasil diambil dari Google (${cand.penerbit || cand.judul})!`
                     };
+
+                    if (tutupList) {
+                        googleIsbnCandidates.value = [];
+                    }
+                };
+
+                const generateIsbnIndo = () => {
+                    cariIsbnDariGoogle();
                 };
 
                 const bersihkanStripIsbn = () => {
@@ -2372,6 +2534,11 @@
                         if(formBuku.value.file) { formBuku.value.Gambar = await uploadBerkas(formBuku.value.file, 'buku'); }
                         // Pastikan KodeBuku murni angka tanpa strip / spasi sesuai standar website YWKA
                         const cleanKodeBuku = String(formBuku.value.kode || '').replace(/[\s\-\.]/g, '').trim();
+                        if (!cleanKodeBuku) {
+                            alert("Nomor ISBN tidak boleh kosong!");
+                            loading.value = false;
+                            return;
+                        }
                         // Bersihkan spasi dan tanda koma berlebih pada kategori/genre
                         const cleanKategori = (formBuku.value.kategori || '')
                             .split(',')
@@ -2394,15 +2561,53 @@
                             Gambar: formBuku.value.Gambar!=='pending'?formBuku.value.Gambar:'',
                             Sinopsis: formBuku.value.sinopsis || ''
                         };
-                        let { error } = await supaClient.from('buku').upsert(p);
-                        if (error && error.message && error.message.toLowerCase().includes('sinopsis')) {
-                            delete p.Sinopsis;
-                            const resRetry = await supaClient.from('buku').upsert(p);
-                            error = resRetry.error;
+
+                        // KETIKA EDIT BUKU DAN NOMOR ISBN DIUBAH (KOREKSI ISBN SALAH)
+                        if (isEditMode.value && oldKodeBuku.value && oldKodeBuku.value !== cleanKodeBuku) {
+                            // Cek apakah nomor ISBN baru sudah dipakai oleh buku lain
+                            const cekDuplikat = dataBuku.value.find(b => b.KodeBuku === cleanKodeBuku && b.KodeBuku !== oldKodeBuku.value);
+                            if (cekDuplikat) {
+                                alert(`Nomor ISBN ${cleanKodeBuku} sudah digunakan oleh buku: "${cekDuplikat.Judul}"! Harap gunakan nomor ISBN lain.`);
+                                loading.value = false;
+                                return;
+                            }
+
+                            // 1. Update row buku di Supabase berdasarkan KodeBuku lama
+                            let { error: errUpdate } = await supaClient.from('buku').update(p).eq('KodeBuku', oldKodeBuku.value);
+                            if (errUpdate) {
+                                // Fallback jika update primary key ditolak oleh engine: buat row baru lalu hapus row lama
+                                let { error: errUpsert } = await supaClient.from('buku').upsert(p);
+                                if (!errUpsert) {
+                                    await supaClient.from('buku').delete().eq('KodeBuku', oldKodeBuku.value);
+                                } else {
+                                    throw errUpsert;
+                                }
+                            }
+
+                            // 2. Sinkronkan ke riwayat peminjaman (transaksi) yang mencatat kode buku lama
+                            try {
+                                const trxTerkait = dataTransaksi.value.filter(t => t.Buku && t.Buku.includes(oldKodeBuku.value));
+                                for (const trx of trxTerkait) {
+                                    const bukuBaruStr = trx.Buku.replace(oldKodeBuku.value, cleanKodeBuku);
+                                    await supaClient.from('transaksi').update({ Buku: bukuBaruStr }).eq('ID', trx.ID);
+                                }
+                            } catch (trxErr) {
+                                console.warn("Sinkronisasi riwayat transaksi gagal:", trxErr);
+                            }
+                            oldKodeBuku.value = cleanKodeBuku;
+                        } else {
+                            let { error } = await supaClient.from('buku').upsert(p);
+                            if (error && error.message && error.message.toLowerCase().includes('sinopsis')) {
+                                delete p.Sinopsis;
+                                const resRetry = await supaClient.from('buku').upsert(p);
+                                error = resRetry.error;
+                            }
+                            if (error) throw error;
                         }
-                        if (error) throw error;
+
                         await fetchSemuaData();
                         showModal.value = false;
+                        googleIsbnCandidates.value = [];
                         alert("Data buku berhasil disimpan!");
                     } catch (e) {
                         console.error("Gagal simpan buku:", e);
@@ -3436,6 +3641,8 @@
                     showModal.value = true; 
                     isEditMode.value = false; 
                     if(tipe === 'buku') {
+                        oldKodeBuku.value = '';
+                        googleIsbnCandidates.value = [];
                         formBuku.value = { kode: '', judul: '', pengarang: '', penerbit: '', tahun: '', kategori: '', rak: '', stok: 1, Gambar: '', sinopsis: '', file: null };
                         isbnScanStatus.value = { loading: false, success: false, message: '' };
                         googleBooksFoundData.value = null;
@@ -3460,6 +3667,8 @@
                 const editBuku = (buku) => { 
                     modalType.value = 'buku'; 
                     isEditMode.value = true; 
+                    oldKodeBuku.value = buku.KodeBuku;
+                    googleIsbnCandidates.value = [];
                     isbnScanStatus.value = { loading: false, success: false, message: '' };
                     googleBooksFoundData.value = null; 
                     formBuku.value = { 
@@ -3565,6 +3774,7 @@
                     daftarKelasSiswa, toggleSortNis, cetakKartuSiswaTerpilih, hapusSiswaTerpilih, ubahStatusSiswaTerpilih,
                     isSearchFocused, searchResultsBuku, searchResultsSiswa,
                     generateIsbnIndo, bersihkanStripIsbn, cekDanBersihkanIsbn,
+                    cariIsbnDariGoogle, pilihKandidatIsbn, googleIsbnCandidates, isSearchingGoogleIsbn, oldKodeBuku,
                     autoIsiGenreWebsite, toggleGenrePill, isGenrePillActive,
                     genrePillsCepat, daftarKategoriWebsiteLengkap
                 }
